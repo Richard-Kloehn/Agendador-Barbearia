@@ -1,0 +1,14 @@
+📌 INSTRUÇÕES PARA ADICIONAR A LOGO
+=====================================
+
+Por favor, adicione a logo da barbearia nesta pasta com o nome:
+   logo.png
+
+Características recomendadas:
+- Formato: PNG com fundo transparente (recomendado) ou JPG
+- Dimensões: 400x400px ou maior (proporção quadrada ou horizontal)
+- Tamanho: Menor que 500KB para carregar rápido
+- Cores: Preto e dourado conforme a identidade visual
+
+O site já está configurado para exibir a logo automaticamente.
+Se a imagem não for encontrada, apenas o nome da barbearia será exibido.

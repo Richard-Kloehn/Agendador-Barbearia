@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento - Barbearia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cinzel:wght@400;600;700;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .brand-title {
+            font-family: 'Pinyon Script', cursive;
+            font-weight: 400;
+            color: #d4af37;
+            text-shadow: 
+                -1px -1px 0 #fff,
+                1px -1px 0 #fff,
+                -1px 1px 0 #fff,
+                1px 1px 0 #fff,
+                0 0 10px rgba(212, 175, 55, 0.8),
+                0 0 20px rgba(212, 175, 55, 0.5),
+                2px 2px 5px rgba(0, 0, 0, 0.8);
+            letter-spacing: 2px;
+        }
+        
+        .brand-subtitle {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            color: #d4af37;
+            text-shadow: 
+                -0.5px -0.5px 0 #fff,
+                0.5px -0.5px 0 #fff,
+                -0.5px 0.5px 0 #fff,
+                0.5px 0.5px 0 #fff,
+                0 0 8px rgba(212, 175, 55, 0.6),
+                1px 1px 3px rgba(0, 0, 0, 0.8);
+            letter-spacing: 6px;
+        }
+        
+        .logo-image {
+            mix-blend-mode: lighten;
+            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(218, 165, 32, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #daa520 0%, #b8860b 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(218, 165, 32, 0.4);
+        }
+        
+        .horario-slot {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .horario-slot:hover {
+            transform: scale(1.05);
+        }
+        
+        .horario-slot.selected {
+            background: linear-gradient(135deg, #daa520 0%, #b8860b 100%);
+            color: white;
+            border-color: #daa520;
+        }
+        
+        .barbeiro-card, .servico-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .barbeiro-card:hover, .servico-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(218, 165, 32, 0.2);
+            border-color: #daa520;
+        }
+        
+        .barbeiro-card.selected, .servico-card.selected {
+            background: linear-gradient(135deg, rgba(218, 165, 32, 0.1), rgba(184, 134, 11, 0.1));
+            border-color: #daa520;
+            box-shadow: 0 5px 15px rgba(218, 165, 32, 0.3);
+        }
+        
+        .barbeiro-card img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+        
+        .gold-text {
+            color: #daa520;
+        }
+        
+        .gold-border {
+            border-color: #daa520;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="py-4">
+        <div class="container mx-auto px-4">
+            <div class="max-w-2xl mx-auto">
+                <div class="flex items-center justify-center gap-6 mb-2" style="margin-left: -8px;">
+                    <img src="/static/img/logo.png?v=3" alt="Navalha's Barber Club" class="h-32 md:h-40 logo-image">
+                    <div class="text-left">
+                        <h1 class="brand-title text-6xl md:text-8xl leading-none mb-0">
+                            Navalha's
+                        </h1>
+                        <h2 class="brand-subtitle text-sm md:text-lg">
+                            BARBER CLUB
+                        </h2>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-3 mb-2">
+                    <div class="w-16 h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent"></div>
+                    <i class="fas fa-cut text-yellow-600 text-lg"></i>
+                    <div class="w-16 h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent"></div>
+                </div>
+                <p class="text-base text-white opacity-90 font-light tracking-wide text-center">Agende seu horário de forma rápida e fácil</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 pb-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Card Principal -->
+            <div class="glass-effect rounded-3xl shadow-2xl p-8 md:p-10 fade-in">
+                <!-- Step 1: Informações do Cliente -->
+                <div id="step1" class="step">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3">1</span>
+                        Seus Dados
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div class="relative">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-user mr-2 gold-text"></i>Nome Completo
+                            </label>
+                            <input type="text" id="nome" 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                                placeholder="Digite seu nome"
+                                autocomplete="off"
+                                oninput="buscarCliente()">
+                            <!-- Dropdown de sugestões -->
+                            <div id="sugestoesCliente" class="hidden absolute z-10 w-full mt-1 bg-white border-2 gold-border rounded-xl shadow-lg max-h-48 overflow-y-auto"></div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-phone mr-2 gold-text"></i>WhatsApp (opcional)
+                            </label>
+                            <input type="tel" id="telefone" 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                                placeholder="(11) 99999-9999">
+                            
+                            <div class="mt-3">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="semWhatsApp" class="mr-2 w-4 h-4" onchange="toggleWhatsApp()">
+                                    <span class="text-sm text-gray-600">Não tenho ou não quero receber lembretes por WhatsApp</span>
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2" id="infoWhatsApp">
+                                <i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes
+                            </p>
+                        </div>
+                        
+                        <button onclick="irParaStep2()" 
+                            class="w-full btn-primary text-white font-bold py-4 rounded-xl shadow-lg">
+                            Continuar <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Escolher Data, Barbeiro, Serviço e Horário -->
+                <div id="step2" class="step hidden">
+                    <button onclick="voltarStep(1)" class="gold-text font-semibold mb-4 hover:text-yellow-700">
+                        <i class="fas fa-arrow-left mr-2"></i>Voltar
+                    </button>
+                    
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3">2</span>
+                        Escolha a Data
+                    </h2>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-calendar mr-2 gold-text"></i>Selecione o dia
+                        </label>
+                        <input type="date" id="data" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                            onchange="carregarBarbeiros()">
+                    </div>
+                    
+                    <!-- Container de Barbeiros -->
+                    <div id="barbeirosContainer" class="mt-6 hidden">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                            <i class="fas fa-cut mr-2 gold-text"></i>Escolha seu Barbeiro
+                        </h3>
+                        <div id="barbeirosGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Barbeiros serão inseridos aqui -->
+                        </div>
+                    </div>
+                    
+                    <!-- Container de Serviços -->
+                    <div id="servicosContainer" class="mt-6 hidden">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                            <i class="fas fa-briefcase mr-2 gold-text"></i>Escolha o Serviço
+                        </h3>
+                        <div id="servicosGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Serviços serão inseridos aqui -->
+                        </div>
+                    </div>
+                    
+                    <!-- Container de Horários -->
+                    <div id="horariosContainer" class="mt-6 hidden">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                            <i class="fas fa-clock mr-2 gold-text"></i>Horários Disponíveis
+                        </h3>
+                        <div id="horariosGrid" class="grid grid-cols-3 md:grid-cols-4 gap-3">
+                            <!-- Horários serão inseridos aqui -->
+                        </div>
+                        
+                        <button onclick="irParaStep3()" id="btnContinuarStep3"
+                            class="w-full btn-primary text-white font-bold py-4 rounded-xl shadow-lg mt-6 hidden">
+                            Continuar <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="loadingHorarios" class="text-center py-8 hidden">
+                        <i class="fas fa-spinner fa-spin text-4xl gold-text"></i>
+                        <p class="text-gray-600 mt-3">Carregando...</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Confirmação -->
+                <div id="step3" class="step hidden">
+                    <button onclick="voltarStep(2)" class="gold-text font-semibold mb-4 hover:text-yellow-700">
+                        <i class="fas fa-arrow-left mr-2"></i>Voltar
+                    </button>
+                    
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white w-10 h-10 rounded-full flex items-center justify-center mr-3">3</span>
+                        Confirmar Agendamento
+                    </h2>
+                    
+                    <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-800 mb-4 text-lg">Resumo do Agendamento</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-user w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Nome:</strong> <span id="resumoNome"></span></span>
+                            </div>
+                            <div class="flex items-center" id="resumoTelefoneDiv">
+                                <i class="fas fa-phone w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Telefone:</strong> <span id="resumoTelefone"></span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-cut w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Barbeiro:</strong> <span id="resumoBarbeiro"></span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-scissors w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Serviço:</strong> <span id="resumoServico"></span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Data:</strong> <span id="resumoData"></span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-clock w-6 gold-text"></i>
+                                <span class="text-gray-700"><strong>Horário:</strong> <span id="resumoHorario"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-comment mr-2 gold-text"></i>Observações (opcional)
+                        </label>
+                        <textarea id="observacoes" rows="3"
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                            placeholder="Alguma preferência ou observação?"></textarea>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6" id="infoWhatsAppStep3">
+                        <p class="text-sm text-gray-800">
+                            <i class="fas fa-info-circle mr-2 gold-text"></i>
+                            <span id="mensagemWhatsApp">Você receberá uma confirmação por WhatsApp e um lembrete 24 horas antes do seu horário.</span>
+                        </p>
+                    </div>
+                    
+                    <button onclick="confirmarAgendamento()" id="btnFinalizar"
+                        class="w-full btn-primary text-white font-bold py-4 rounded-xl shadow-lg">
+                        <i class="fas fa-check-circle mr-2"></i>Confirmar Agendamento
+                    </button>
+                </div>
+
+                <!-- Step 4: Sucesso -->
+                <div id="step4" class="step hidden text-center">
+                    <div class="mb-6">
+                        <i class="fas fa-check-circle text-green-500 text-7xl mb-4"></i>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-3">Agendamento Confirmado!</h2>
+                        <p class="text-gray-600 text-lg">Seu horário foi reservado com sucesso.</p>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 text-left" id="proximosPassos">
+                        <h3 class="font-bold text-gray-800 mb-3">Próximos Passos:</h3>
+                        <ul class="space-y-2 text-gray-700" id="listaSucesso">
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Você receberá uma confirmação por WhatsApp</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Um lembrete será enviado 24 horas antes</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Você poderá confirmar ou cancelar pelo WhatsApp</li>
+                        </ul>
+                    </div>
+                    
+                    <button onclick="novoAgendamento()" 
+                        class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-4 rounded-xl shadow-lg transition">
+                        <i class="fas fa-plus mr-2"></i>Fazer Novo Agendamento
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Link para Admin -->
+            <div class="text-center mt-6">
+                <a href="/admin-login" class="text-white hover:text-gray-200 text-sm opacity-75">
+                    <i class="fas fa-lock mr-1"></i>Área Administrativa
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        let clienteSelecionado = null;
+        let timeoutBusca = null;
+
+        // Buscar cliente para autocompletar
+        async function buscarCliente() {
+            const nome = document.getElementById('nome').value.trim();
+            const sugestoesDiv = document.getElementById('sugestoesCliente');
+            
+            // Limpar timeout anterior
+            if (timeoutBusca) {
+                clearTimeout(timeoutBusca);
+            }
+            
+            if (nome.length < 3) {
+                sugestoesDiv.classList.add('hidden');
+                sugestoesDiv.innerHTML = '';
+                return;
+            }
+            
+            // Aguardar 300ms após parar de digitar
+            timeoutBusca = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/buscar-cliente?termo=${encodeURIComponent(nome)}`);
+                    const dados = await response.json();
+                    
+                    if (dados.clientes && dados.clientes.length > 0) {
+                        sugestoesDiv.innerHTML = '';
+                        sugestoesDiv.classList.remove('hidden');
+                        
+                        dados.clientes.forEach(cliente => {
+                            const div = document.createElement('div');
+                            div.className = 'px-4 py-3 hover:bg-purple-50 cursor-pointer border-b last:border-b-0 transition';
+                            div.innerHTML = `
+                                <div class="font-semibold text-gray-800">${cliente.nome_completo}</div>
+                                <div class="text-sm text-gray-600">${formatarTelefone(cliente.telefone)}</div>
+                                <div class="text-xs text-purple-600 mt-1">
+                                    <i class="fas fa-history"></i> ${cliente.total_agendamentos} agendamento(s)
+                                </div>
+                            `;
+                            div.onclick = () => selecionarCliente(cliente);
+                            sugestoesDiv.appendChild(div);
+                        });
+                    } else {
+                        sugestoesDiv.classList.add('hidden');
+                        sugestoesDiv.innerHTML = '';
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar cliente:', error);
+                }
+            }, 300);
+        }
+        
+        function selecionarCliente(cliente) {
+            clienteSelecionado = cliente;
+            document.getElementById('nome').value = cliente.nome_completo;
+            document.getElementById('telefone').value = formatarTelefone(cliente.telefone);
+            document.getElementById('sugestoesCliente').classList.add('hidden');
+            
+            // Mostrar mensagem de boas-vindas
+            const nomeInput = document.getElementById('nome');
+            nomeInput.classList.add('border-green-500');
+            setTimeout(() => {
+                nomeInput.classList.remove('border-green-500');
+            }, 2000);
+        }
+        
+        function formatarTelefone(telefone) {
+            if (!telefone) return '';
+            const tel = telefone.replace(/\D/g, '');
+            if (tel.length === 11) {
+                return `(${tel.substr(0,2)}) ${tel.substr(2,5)}-${tel.substr(7)}`;
+            }
+            if (tel.length === 10) {
+                return `(${tel.substr(0,2)}) ${tel.substr(2,4)}-${tel.substr(6)}`;
+            }
+            return telefone;
+        }
+        
+        // Fechar sugestões ao clicar fora
+        document.addEventListener('click', function(e) {
+            const sugestoesDiv = document.getElementById('sugestoesCliente');
+            const nomeInput = document.getElementById('nome');
+            if (!sugestoesDiv.contains(e.target) && e.target !== nomeInput) {
+                sugestoesDiv.classList.add('hidden');
+            }
+        });
+
+        let horarioSelecionado = null;
+        let barbeiroSelecionado = null;
+        let servicoSelecionado = null;
+        let dadosAgendamento = {};
+
+        // Configurar data mínima (hoje)
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('data').setAttribute('min', hoje);
+            
+            // Mask para telefone
+            const telefoneInput = document.getElementById('telefone');
+            telefoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                    value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+                    e.target.value = value;
+                }
+            });
+        });
+
+        function toggleWhatsApp() {
+            const semWhatsApp = document.getElementById('semWhatsApp').checked;
+            const telefoneInput = document.getElementById('telefone');
+            const infoWhatsApp = document.getElementById('infoWhatsApp');
+            
+            if (semWhatsApp) {
+                telefoneInput.disabled = true;
+                telefoneInput.value = '';
+                telefoneInput.classList.add('bg-gray-100');
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Você não receberá confirmações por WhatsApp';
+            } else {
+                telefoneInput.disabled = false;
+                telefoneInput.classList.remove('bg-gray-100');
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes';
+            }
+        }
+
+        function irParaStep2() {
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+            const semWhatsApp = document.getElementById('semWhatsApp').checked;
+            
+            if (!nome) {
+                alert('Por favor, digite seu nome');
+                return;
+            }
+            
+            if (!semWhatsApp && (!telefone || telefone.length < 14)) {
+                alert('Por favor, digite um telefone válido ou marque a opção "Não tenho WhatsApp"');
+                return;
+            }
+            
+            dadosAgendamento.nome = nome;
+            dadosAgendamento.telefone = semWhatsApp ? 'Sem WhatsApp' : telefone;
+            dadosAgendamento.semWhatsApp = semWhatsApp;
+            
+            mostrarStep(2);
+        }
+
+        function irParaStep3() {
+            if (!horarioSelecionado || !barbeiroSelecionado || !servicoSelecionado) {
+                alert('Por favor, complete todas as seleções');
+                return;
+            }
+            
+            // Preencher resumo
+            document.getElementById('resumoNome').textContent = dadosAgendamento.nome;
+            
+            // Mostrar ou esconder telefone no resumo
+            const resumoTelefoneDiv = document.getElementById('resumoTelefoneDiv');
+            const mensagemWhatsApp = document.getElementById('mensagemWhatsApp');
+            const infoWhatsAppStep3 = document.getElementById('infoWhatsAppStep3');
+            
+            if (dadosAgendamento.semWhatsApp) {
+                resumoTelefoneDiv.style.display = 'none';
+                mensagemWhatsApp.textContent = 'Você optou por não receber notificações por WhatsApp.';
+                infoWhatsAppStep3.classList.remove('bg-yellow-50', 'border-yellow-200');
+                infoWhatsAppStep3.classList.add('bg-gray-50', 'border-gray-200');
+            } else {
+                resumoTelefoneDiv.style.display = 'flex';
+                document.getElementById('resumoTelefone').textContent = dadosAgendamento.telefone;
+                mensagemWhatsApp.textContent = 'Você receberá uma confirmação por WhatsApp e um lembrete 24 horas antes do seu horário.';
+                infoWhatsAppStep3.classList.remove('bg-gray-50', 'border-gray-200');
+                infoWhatsAppStep3.classList.add('bg-yellow-50', 'border-yellow-200');
+            }
+            
+            document.getElementById('resumoTelefone').textContent = dadosAgendamento.telefone;
+            
+            // Adicionar informações de barbeiro e serviço
+            document.getElementById('resumoBarbeiro').textContent = barbeiroSelecionado.nome;
+            document.getElementById('resumoServico').textContent = `${servicoSelecionado.nome} - R$ ${servicoSelecionado.preco.toFixed(2)}`;
+            
+            const data = document.getElementById('data').value;
+            const dataObj = new Date(data + 'T00:00:00');
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('resumoData').textContent = dataFormatada;
+            document.getElementById('resumoHorario').textContent = horarioSelecionado;
+            
+            dadosAgendamento.data = data;
+            dadosAgendamento.horario = horarioSelecionado;
+            dadosAgendamento.barbeiro_id = barbeiroSelecionado.id;
+            dadosAgendamento.servico_id = servicoSelecionado.id;
+            
+            mostrarStep(3);
+        }
+
+        function voltarStep(step) {
+            mostrarStep(step);
+        }
+
+        function mostrarStep(numero) {
+            document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
+            document.getElementById('step' + numero).classList.remove('hidden');
+        }
+
+        async function carregarBarbeiros() {
+            const data = document.getElementById('data').value;
+            if (!data) return;
+            
+            // Reset seleções
+            barbeiroSelecionado = null;
+            servicoSelecionado = null;
+            horarioSelecionado = null;
+            
+            // Esconder containers
+            document.getElementById('servicosContainer').classList.add('hidden');
+            document.getElementById('horariosContainer').classList.add('hidden');
+            document.getElementById('btnContinuarStep3').classList.add('hidden');
+            
+            const container = document.getElementById('barbeirosContainer');
+            const loading = document.getElementById('loadingHorarios');
+            const grid = document.getElementById('barbeirosGrid');
+            
+            container.classList.add('hidden');
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/barbeiros');
+                const dados = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (dados.barbeiros && dados.barbeiros.length > 0) {
+                    dados.barbeiros.forEach(barbeiro => {
+                        const div = document.createElement('div');
+                        div.className = 'barbeiro-card rounded-xl p-4 bg-white shadow-sm';
+                        div.innerHTML = `
+                            <div class="flex flex-col items-center text-center">
+                                <img src="${barbeiro.foto_url}" alt="${barbeiro.nome}" class="rounded-full mb-3 border-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 text-lg">${barbeiro.nome}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${barbeiro.servicos_count || 0} serviços</p>
+                            </div>
+                        `;
+                        div.onclick = () => selecionarBarbeiro(barbeiro, div);
+                        grid.appendChild(div);
+                    });
+                    container.classList.remove('hidden');
+                } else {
+                    grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8"><i class="fas fa-user-slash text-4xl mb-2"></i><p>Nenhum barbeiro disponível</p></div>';
+                    container.classList.remove('hidden');
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Erro ao carregar barbeiros. Tente novamente.');
+                console.error(error);
+            }
+        }
+        
+        async function selecionarBarbeiro(barbeiro, elemento) {
+            // Remover seleção anterior
+            document.querySelectorAll('.barbeiro-card').forEach(el => el.classList.remove('selected'));
+            elemento.classList.add('selected');
+            
+            barbeiroSelecionado = barbeiro;
+            servicoSelecionado = null;
+            horarioSelecionado = null;
+            
+            // Esconder containers seguintes
+            document.getElementById('horariosContainer').classList.add('hidden');
+            document.getElementById('btnContinuarStep3').classList.add('hidden');
+            
+            // Carregar serviços do barbeiro
+            const container = document.getElementById('servicosContainer');
+            const grid = document.getElementById('servicosGrid');
+            const loading = document.getElementById('loadingHorarios');
+            
+            container.classList.add('hidden');
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            
+            try {
+                // Carregar serviços
+                const response = await fetch('/api/servicos');
+                const dados = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (dados.servicos && dados.servicos.length > 0) {
+                    // Filtrar apenas serviços que o barbeiro oferece
+                    const servicosDoBarbeiro = dados.servicos.filter(s => 
+                        barbeiro.servicos_ids && barbeiro.servicos_ids.includes(s.id)
+                    );
+                    
+                    if (servicosDoBarbeiro.length > 0) {
+                        servicosDoBarbeiro.forEach(servico => {
+                            const div = document.createElement('div');
+                            div.className = 'servico-card rounded-xl p-4 bg-white shadow-sm';
+                            div.innerHTML = `
+                                <div class="flex items-start">
+                                    <i class="fas fa-scissors text-2xl gold-text mr-4 mt-1"></i>
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-800 text-lg">${servico.nome}</h4>
+                                        <p class="text-sm text-gray-600 mt-1">${servico.descricao || ''}</p>
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <span class="text-sm text-gray-600">
+                                                <i class="fas fa-clock gold-text mr-1"></i>${servico.duracao} min
+                                            </span>
+                                            <span class="text-xl font-bold gold-text">R$ ${servico.preco.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            div.onclick = () => selecionarServico(servico, div);
+                            grid.appendChild(div);
+                        });
+                        container.classList.remove('hidden');
+                    } else {
+                        grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8"><i class="fas fa-briefcase text-4xl mb-2"></i><p>Nenhum serviço disponível para este barbeiro</p></div>';
+                        container.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Erro ao carregar serviços. Tente novamente.');
+                console.error(error);
+            }
+        }
+        
+        async function selecionarServico(servico, elemento) {
+            // Remover seleção anterior
+            document.querySelectorAll('.servico-card').forEach(el => el.classList.remove('selected'));
+            elemento.classList.add('selected');
+            
+            servicoSelecionado = servico;
+            horarioSelecionado = null;
+            
+            // Esconder botão continuar
+            document.getElementById('btnContinuarStep3').classList.add('hidden');
+            
+            // Carregar horários disponíveis
+            await buscarHorarios();
+        }
+        
+        async function buscarHorarios() {
+            const data = document.getElementById('data').value;
+            
+            if (!data || !barbeiroSelecionado || !servicoSelecionado) {
+                return;
+            }
+            
+            const container = document.getElementById('horariosContainer');
+            const loading = document.getElementById('loadingHorarios');
+            const grid = document.getElementById('horariosGrid');
+            
+            container.classList.add('hidden');
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            horarioSelecionado = null;
+            
+            try {
+                const response = await fetch(
+                    `/api/horarios-disponiveis?data=${data}&barbeiro_id=${barbeiroSelecionado.id}&servico_id=${servicoSelecionado.id}`
+                );
+                const dados = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (dados.disponiveis && dados.disponiveis.length > 0) {
+                    dados.disponiveis.forEach(horario => {
+                        const div = document.createElement('div');
+                        div.className = 'horario-slot border-2 border-gray-300 rounded-lg py-3 px-2 text-center font-semibold text-gray-700';
+                        div.textContent = horario;
+                        div.onclick = () => selecionarHorario(horario, div);
+                        grid.appendChild(div);
+                    });
+                    container.classList.remove('hidden');
+                } else {
+                    grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8"><i class="fas fa-calendar-times text-4xl mb-2"></i><p>Nenhum horário disponível para esta data</p></div>';
+                    container.classList.remove('hidden');
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Erro ao buscar horários. Tente novamente.');
+                console.error(error);
+            }
+        }
+
+        function selecionarHorario(horario, elemento) {
+            document.querySelectorAll('.horario-slot').forEach(el => el.classList.remove('selected'));
+            elemento.classList.add('selected');
+            horarioSelecionado = horario;
+            document.getElementById('btnContinuarStep3').classList.remove('hidden');
+        }
+
+        async function confirmarAgendamento() {
+            const btnFinalizar = document.getElementById('btnFinalizar');
+            btnFinalizar.disabled = true;
+            btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Confirmando...';
+            
+            const dataHora = `${dadosAgendamento.data}T${dadosAgendamento.horario}:00`;
+            const observacoes = document.getElementById('observacoes').value;
+            
+            try {
+                const response = await fetch('/api/agendar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome_cliente: dadosAgendamento.nome,
+                        telefone: dadosAgendamento.semWhatsApp ? '' : dadosAgendamento.telefone,
+                        data_hora: dataHora,
+                        barbeiro_id: dadosAgendamento.barbeiro_id,
+                        servico_id: dadosAgendamento.servico_id,
+                        observacoes: observacoes
+                    })
+                });
+                
+                const resultado = await response.json();
+                
+                if (response.ok) {
+                    // Atualizar mensagem de sucesso baseado na opção de WhatsApp
+                    const listaSucesso = document.getElementById('listaSucesso');
+                    if (dadosAgendamento.semWhatsApp) {
+                        listaSucesso.innerHTML = `
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Seu agendamento foi confirmado</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Compareça no dia e horário marcados</li>
+                            <li><i class="fas fa-info-circle text-blue-600 mr-2"></i>Guarde os dados do seu agendamento</li>
+                        `;
+                    }
+                    mostrarStep(4);
+                } else {
+                    alert(resultado.erro || 'Erro ao criar agendamento');
+                    btnFinalizar.disabled = false;
+                    btnFinalizar.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Confirmar Agendamento';
+                }
+            } catch (error) {
+                alert('Erro ao criar agendamento. Tente novamente.');
+                console.error(error);
+                btnFinalizar.disabled = false;
+                btnFinalizar.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Confirmar Agendamento';
+            }
+        }
+
+        function novoAgendamento() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

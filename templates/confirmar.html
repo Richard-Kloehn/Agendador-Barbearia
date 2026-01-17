@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação - Barbearia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="glass-effect rounded-3xl shadow-2xl p-8 md:p-10 max-w-md w-full">
+        <div class="text-center mb-6">
+            <i class="fas fa-calendar-check text-6xl text-purple-600 mb-4"></i>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Confirmar Agendamento</h1>
+            <p class="text-gray-600">{{ agendamento.nome_cliente }}</p>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 mb-6">
+            <div class="space-y-3">
+                <div class="flex items-center">
+                    <i class="fas fa-calendar w-6 text-purple-600"></i>
+                    <span class="text-gray-700"><strong>Data:</strong> {{ agendamento.data_hora.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-clock w-6 text-purple-600"></i>
+                    <span class="text-gray-700"><strong>Horário:</strong> {{ agendamento.data_hora.strftime('%H:%M') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="space-y-3">
+            <button onclick="confirmar()" id="btnConfirmar"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition">
+                <i class="fas fa-check-circle mr-2"></i>Confirmar Presença
+            </button>
+            
+            <button onclick="cancelar()" id="btnCancelar"
+                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg transition">
+                <i class="fas fa-times-circle mr-2"></i>Cancelar Agendamento
+            </button>
+        </div>
+        
+        <div id="resultado" class="mt-6 hidden"></div>
+    </div>
+
+    <script>
+        const token = "{{ agendamento.token_confirmacao }}";
+        
+        async function confirmar() {
+            await enviarAcao('confirmar', 'Agendamento confirmado com sucesso!', 'green');
+        }
+        
+        async function cancelar() {
+            if (!confirm('Tem certeza que deseja cancelar?')) return;
+            await enviarAcao('cancelar', 'Agendamento cancelado.', 'red');
+        }
+        
+        async function enviarAcao(acao, mensagem, cor) {
+            const btnConfirmar = document.getElementById('btnConfirmar');
+            const btnCancelar = document.getElementById('btnCancelar');
+            
+            btnConfirmar.disabled = true;
+            btnCancelar.disabled = true;
+            
+            try {
+                const response = await fetch(`/api/confirmar/${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ acao: acao })
+                });
+                
+                const resultado = await response.json();
+                
+                const divResultado = document.getElementById('resultado');
+                divResultado.className = `mt-6 p-4 rounded-xl text-center text-white bg-${cor}-600`;
+                divResultado.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${resultado.mensagem || mensagem}`;
+                divResultado.classList.remove('hidden');
+                
+                btnConfirmar.classList.add('hidden');
+                btnCancelar.classList.add('hidden');
+            } catch (error) {
+                alert('Erro ao processar. Tente novamente.');
+                btnConfirmar.disabled = false;
+                btnCancelar.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

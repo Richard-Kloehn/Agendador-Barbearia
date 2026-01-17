@@ -1,0 +1,23 @@
+{
+  "name": "barbearia-agendamento",
+  "version": "1.0.0",
+  "description": "Sistema de agendamento para barbearia",
+  "main": "app.py",
+  "scripts": {
+    "start": "python app.py",
+    "dev": "python app.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "seu-repositorio"
+  },
+  "keywords": [
+    "barbearia",
+    "agendamento",
+    "flask",
+    "python",
+    "whatsapp"
+  ],
+  "author": "Seu Nome",
+  "license": "MIT"
+}
