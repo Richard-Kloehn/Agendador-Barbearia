@@ -90,21 +90,49 @@ def confirmar_agendamento(token):
         return render_template('confirmar.html', agendamento=agendamento)
     return "Link inválido ou expirado", 404
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        # Criar configuração padrão se não existir
-        if not ConfiguracaoBarbearia.query.first():
-            config = ConfiguracaoBarbearia(
-                nome_barbearia="Navalha's Barber Club",
-                horario_abertura="09:00",
-                horario_fechamento="19:00",
-                duracao_atendimento=30,
-                intervalo_almoco_inicio="12:00",
-                intervalo_almoco_fim="13:00"
-            )
-            db.session.add(config)
-            db.session.commit()
+# Inicializar banco de dados na primeira execução
+with app.app_context():
+    db.create_all()
     
+    # Criar configuração padrão se não existir
+    if not ConfiguracaoBarbearia.query.first():
+        from models import Barbeiro, Servico
+        
+        config = ConfiguracaoBarbearia(
+            nome_barbearia="Navalha's Barber Club",
+            horario_abertura="09:00",
+            horario_fechamento="19:00",
+            duracao_atendimento=30,
+            intervalo_almoco_inicio="12:00",
+            intervalo_almoco_fim="13:00"
+        )
+        db.session.add(config)
+        
+        # Criar barbeiros iniciais
+        barbeiro1 = Barbeiro(nome="Bryan Victor Felippi", foto_url="https://via.placeholder.com/150", ativo=True, ordem=1)
+        barbeiro2 = Barbeiro(nome="Fabricio", foto_url="https://via.placeholder.com/150", ativo=True, ordem=2)
+        barbeiro3 = Barbeiro(nome="Felipe Soares Santana", foto_url="https://via.placeholder.com/150", ativo=True, ordem=3)
+        
+        db.session.add_all([barbeiro1, barbeiro2, barbeiro3])
+        db.session.flush()
+        
+        # Criar serviços iniciais
+        servico1 = Servico(nome="Corte", descricao="Corte de cabelo masculino", duracao=30, preco=45.00, ativo=True)
+        servico2 = Servico(nome="Barba", descricao="Barba completa", duracao=30, preco=45.00, ativo=True)
+        servico3 = Servico(nome="Combo Corte + Barba", descricao="Corte e barba", duracao=45, preco=95.00, ativo=True)
+        servico4 = Servico(nome="Sobrancelha", descricao="Design de sobrancelha", duracao=15, preco=25.00, ativo=True)
+        servico5 = Servico(nome="Pézinho", descricao="Acabamento do pescoço", duracao=15, preco=20.00, ativo=True)
+        
+        db.session.add_all([servico1, servico2, servico3, servico4, servico5])
+        db.session.flush()
+        
+        # Associar todos os serviços a todos os barbeiros
+        for barbeiro in [barbeiro1, barbeiro2, barbeiro3]:
+            barbeiro.servicos.extend([servico1, servico2, servico3, servico4, servico5])
+        
+        db.session.commit()
+        print("✅ Banco de dados inicializado com barbeiros e serviços!")
+
+if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
