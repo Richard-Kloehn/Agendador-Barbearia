@@ -13,6 +13,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['ADMIN_PASSWORD'] = '123'  # Senha do admin
 
+# Otimizações para produção
+if os.getenv('DATABASE_URL') and 'postgresql' in os.getenv('DATABASE_URL', ''):
+    # Pool de conexões otimizado para PostgreSQL
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'max_overflow': 5
+    }
+
 # Inicializar banco
 from database import db
 db.init_app(app)
@@ -96,7 +106,7 @@ with app.app_context():
     
     # Criar configuração padrão se não existir
     if not ConfiguracaoBarbearia.query.first():
-        from models import Barbeiro, Servico
+        from models import Barbeiro, Servico, HorarioBarbeiro
         
         config = ConfiguracaoBarbearia(
             nome_barbearia="Navalha's Barber Club",
@@ -130,8 +140,22 @@ with app.app_context():
         for barbeiro in [barbeiro1, barbeiro2, barbeiro3]:
             barbeiro.servicos.extend([servico1, servico2, servico3, servico4, servico5])
         
+        # Criar horários padrão para os barbeiros (Segunda a Sábado)
+        for barbeiro in [barbeiro1, barbeiro2, barbeiro3]:
+            for dia in range(1, 7):  # 1=Segunda até 6=Sábado
+                horario = HorarioBarbeiro(
+                    barbeiro_id=barbeiro.id,
+                    dia_semana=dia,
+                    horario_inicio=config.horario_abertura,
+                    horario_fim=config.horario_fechamento,
+                    intervalo_almoco_inicio=config.intervalo_almoco_inicio,
+                    intervalo_almoco_fim=config.intervalo_almoco_fim,
+                    ativo=True
+                )
+                db.session.add(horario)
+        
         db.session.commit()
-        print("✅ Banco de dados inicializado com barbeiros e serviços!")
+        print("✅ Banco de dados inicializado com barbeiros, serviços e horários!")
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

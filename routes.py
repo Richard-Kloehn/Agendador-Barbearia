@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, timedelta, time
 from database import db
+from sqlalchemy.orm import joinedload
 from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro
 from services.whatsapp_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
 from werkzeug.utils import secure_filename
@@ -713,9 +714,12 @@ def listar_barbeiros():
     """Lista barbeiros ativos e disponíveis para uma data específica"""
     data_str = request.args.get('data')
     
-    # Se não tiver data, retorna todos os barbeiros ativos
+    # Se não tiver data, retorna todos os barbeiros ativos com eager loading
     if not data_str:
-        barbeiros = Barbeiro.query.filter_by(ativo=True).order_by(Barbeiro.ordem).all()
+        barbeiros = Barbeiro.query.options(joinedload(Barbeiro.servicos))\
+            .filter_by(ativo=True)\
+            .order_by(Barbeiro.ordem)\
+            .all()
         return jsonify({
             'barbeiros': [b.to_dict() for b in barbeiros]
         })
@@ -732,8 +736,11 @@ def listar_barbeiros():
         # Data bloqueada - sem barbeiros disponíveis
         return jsonify({'barbeiros': []})
     
-    # Buscar todos os barbeiros ativos
-    barbeiros = Barbeiro.query.filter_by(ativo=True).order_by(Barbeiro.ordem).all()
+    # Buscar todos os barbeiros ativos com eager loading
+    barbeiros = Barbeiro.query.options(joinedload(Barbeiro.servicos))\
+        .filter_by(ativo=True)\
+        .order_by(Barbeiro.ordem)\
+        .all()
     
     # Filtrar barbeiros que trabalham neste dia da semana
     dia_semana = data.weekday()  # 0=segunda, 6=domingo
