@@ -11,20 +11,33 @@ import os
 import shutil
 import threading
 from datetime import datetime, time as time_obj
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import (
-    TimeoutException,
-    NoSuchElementException,
-    WebDriverException
-)
 from urllib.parse import quote
-from webdriver_manager.chrome import ChromeDriverManager
 import queue
+
+# Importação opcional do Selenium (apenas para ambiente local)
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.common.exceptions import (
+        TimeoutException,
+        NoSuchElementException,
+        WebDriverException
+    )
+    from webdriver_manager.chrome import ChromeDriverManager
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+    # Definir classes dummy para evitar erros
+    class TimeoutException(Exception):
+        pass
+    class NoSuchElementException(Exception):
+        pass
+    class WebDriverException(Exception):
+        pass
 
 # Configuração de logging
 logging.basicConfig(
@@ -49,6 +62,9 @@ class WhatsAppService:
     INTERVALO_MINIMO_MESMA_CONVERSA = 60  # 1 minuto entre mensagens para mesmo número
     
     def __init__(self):
+        if not SELENIUM_AVAILABLE:
+            logger.warning("Selenium não disponível. WhatsApp automação não funcionará.")
+        
         self.driver = None
         self.wait_timeout = 30
         self.fila_mensagens = queue.Queue()
@@ -122,6 +138,10 @@ class WhatsAppService:
         - Primeira vez (sem sessão): Abre VISÍVEL para escanear QR Code
         - Já logado (com sessão): Abre INVISÍVEL (headless)
         """
+        if not SELENIUM_AVAILABLE:
+            logger.error("Selenium não está disponível. A automação do WhatsApp não pode ser usada em produção.")
+            return False
+        
         try:
             session_dir = os.path.abspath('whatsapp_session')
             
