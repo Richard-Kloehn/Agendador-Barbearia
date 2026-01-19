@@ -6,6 +6,8 @@ from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente,
 from werkzeug.utils import secure_filename
 import re
 import os
+from functools import lru_cache
+from sqlalchemy import and_, or_
 
 # Importar cliente da API de WhatsApp (funciona em produção)
 try:
@@ -17,25 +19,39 @@ except ImportError:
 api_bp = Blueprint('api', __name__)
 admin_bp = Blueprint('admin', __name__)
 
+# Cache para dados que mudam pouco
+_cache_dias_com_barbeiros = {'data': None, 'valor': None}
+_cache_config = {'data': None, 'valor': None}
+
 def validar_telefone(telefone):
     """Valida formato de telefone brasileiro"""
     telefone = re.sub(r'\D', '', telefone)
     return len(telefone) >= 10 and len(telefone) <= 11
 
 def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=None):
-    """Gera lista de horários disponíveis para uma data, barbeiro e serviço específicos"""
+    """Gera lista de horários disponíveis para uma data, barbeiro e serviço específicos (otimizado)"""
     horarios = []
     
     if not barbeiro_id:
         return horarios
     
-    # Verificar se existe horário especial para esta data e barbeiro
-    horario_especial = HorarioEspecial.query.filter_by(data=data, barbeiro_id=barbeiro_id).first()
-    if not horario_especial:
-        # Tentar horário especial para todos os barbeiros
-        horario_especial = HorarioEspecial.query.filter_by(data=data, barbeiro_id=None).first()
+    # Buscar horários especiais com uma única query (otimizado com or_)
+    horarios_especiais = HorarioEspecial.query.filter(
+        HorarioEspecial.data == data,
+        or_(HorarioEspecial.barbeiro_id == barbeiro_id, HorarioEspecial.barbeiro_id == None)
+    ).all()
     
-    if horario_especial:
+    # Priorizar horário específico do barbeiro
+    horario_especial = None
+    for h in horarios_especiais:
+        if h.barbeiro_id == barbeiro_id:
+            horario_especial = h
+            break
+    
+    if not horario_especial and horarios_especiais:
+        horario_especial = horarios_especiais[0]
+    
+    if horario_especial and horario_especial.horario_abertura:
         # Usar horários especiais
         hora_inicio = datetime.strptime(horario_especial.horario_abertura, '%H:%M').time()
         hora_fim = datetime.strptime(horario_especial.horario_fechamento, '%H:%M').time()
@@ -81,6 +97,17 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
     hora_final = datetime.combine(data, hora_fim)
     agora = datetime.now()
     
+    # Pré-carregar agendamentos do barbeiro nesta data (uma única query em vez de muitas)
+    agendamentos_dia = Agendamento.query.filter(
+        Agendamento.data_hora >= datetime.combine(data, time(0, 0)),
+        Agendamento.data_hora <= datetime.combine(data, time(23, 59)),
+        Agendamento.barbeiro_id == barbeiro_id,
+        Agendamento.status.in_(['pendente', 'confirmado'])
+    ).all()
+    
+    # Criar set de horas ocupadas para busca O(1)
+    horas_ocupadas = {a.data_hora for a in agendamentos_dia}
+    
     while hora_atual < hora_final:
         # Se for hoje, ocultar horários que já passaram
         if data == agora.date() and hora_atual <= agora:
@@ -93,18 +120,8 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
                 hora_atual += duracao
                 continue
         
-        # Verificar se horário já está agendado para este barbeiro específico
-        query = Agendamento.query.filter(
-            Agendamento.data_hora == hora_atual,
-            Agendamento.status.in_(['pendente', 'confirmado'])
-        )
-        
-        if barbeiro_id:
-            query = query.filter(Agendamento.barbeiro_id == barbeiro_id)
-        
-        agendamento_existente = query.first()
-        
-        if not agendamento_existente:
+        # Verificar se horário já está agendado (busca O(1) no set)
+        if hora_atual not in horas_ocupadas:
             horarios.append(hora_atual.strftime('%H:%M'))
         
         hora_atual += duracao
@@ -187,62 +204,74 @@ def buscar_cliente():
         'clientes': [c.to_dict() for c in clientes]
     })
 
+def get_dias_com_barbeiros_otimizado():
+    """Retorna dias da semana com barbeiros usando uma única query otimizada"""
+    global _cache_dias_com_barbeiros
+    
+    # Usar cache se foi atualizado há menos de 1 hora
+    agora = datetime.now()
+    if _cache_dias_com_barbeiros['data'] and (agora - _cache_dias_com_barbeiros['data']).total_seconds() < 3600:
+        return _cache_dias_com_barbeiros['valor']
+    
+    # Query otimizada: uma única query com join
+    horarios = HorarioBarbeiro.query.join(Barbeiro).filter(
+        Barbeiro.ativo == True,
+        HorarioBarbeiro.ativo == True
+    ).distinct(HorarioBarbeiro.dia_semana).all()
+    
+    dias_com_barbeiros = {h.dia_semana for h in horarios}
+    
+    # Atualizar cache
+    _cache_dias_com_barbeiros = {'data': agora, 'valor': dias_com_barbeiros}
+    
+    return dias_com_barbeiros
+
 @api_bp.route('/datas-disponiveis', methods=['GET'])
 def listar_datas_disponiveis():
-    """Retorna informações sobre disponibilidade de datas para os próximos 90 dias"""
+    """Retorna informações sobre disponibilidade de datas para os próximos 90 dias (otimizado)"""
     hoje = datetime.now().date()
     data_final = hoje + timedelta(days=90)
     
-    # Buscar dias bloqueados
-    dias_bloqueados = DiaIndisponivel.query.filter(
+    # Buscar dias bloqueados com uma única query
+    dias_bloqueados_query = DiaIndisponivel.query.filter(
         DiaIndisponivel.data >= hoje,
         DiaIndisponivel.data <= data_final
     ).all()
     
-    datas_bloqueadas = [d.data.strftime('%Y-%m-%d') for d in dias_bloqueados]
+    datas_bloqueadas = {d.data.strftime('%Y-%m-%d') for d in dias_bloqueados_query}
     
-    # Verificar quais dias da semana têm barbeiros trabalhando
-    barbeiros_ativos = Barbeiro.query.filter_by(ativo=True).all()
+    # Buscar horários especiais com uma única query
+    horarios_especiais_query = HorarioEspecial.query.filter(
+        HorarioEspecial.data >= hoje,
+        HorarioEspecial.data <= data_final
+    ).all()
     
-    # Mapear dias da semana que têm pelo menos um barbeiro
-    dias_com_barbeiros = set()
-    for barbeiro in barbeiros_ativos:
-        horarios = HorarioBarbeiro.query.filter_by(
-            barbeiro_id=barbeiro.id,
-            ativo=True
-        ).all()
-        for horario in horarios:
-            dias_com_barbeiros.add(horario.dia_semana)
+    datas_especiais = {h.data.strftime('%Y-%m-%d') for h in horarios_especiais_query}
     
-    # Gerar lista de datas indisponíveis
+    # Obter dias com barbeiros (com cache)
+    dias_com_barbeiros = get_dias_com_barbeiros_otimizado()
+    
+    # Gerar lista de datas indisponíveis de forma otimizada
     datas_indisponiveis = []
     data_atual = hoje
     
     while data_atual <= data_final:
         data_str = data_atual.strftime('%Y-%m-%d')
         
-        # Verificar se está bloqueada
+        # Verificações na ordem de performance (mais rápidas primeiro)
         if data_str in datas_bloqueadas:
             datas_indisponiveis.append(data_str)
-            data_atual += timedelta(days=1)
-            continue
-        
-        # Verificar se tem horário especial (sempre disponível se tiver)
-        horario_especial = HorarioEspecial.query.filter_by(data=data_atual).first()
-        if horario_especial:
-            data_atual += timedelta(days=1)
-            continue
-        
-        # Verificar dia da semana
-        dia_semana = data_atual.weekday()  # 0=segunda, 6=domingo
-        if dia_semana == 6:  # domingo
-            dia_semana_db = 0
+        elif data_str in datas_especiais:
+            # Horário especial sempre disponível, pula
+            pass
         else:
-            dia_semana_db = dia_semana + 1
-        
-        # Se não tem nenhum barbeiro neste dia da semana
-        if dia_semana_db not in dias_com_barbeiros:
-            datas_indisponiveis.append(data_str)
+            # Verificar dia da semana
+            dia_semana = data_atual.weekday()  # 0=segunda, 6=domingo
+            dia_semana_db = 0 if dia_semana == 6 else dia_semana + 1
+            
+            # Se não tem nenhum barbeiro neste dia da semana
+            if dia_semana_db not in dias_com_barbeiros:
+                datas_indisponiveis.append(data_str)
         
         data_atual += timedelta(days=1)
     
@@ -756,44 +785,77 @@ def listar_barbeiros():
     else:
         dia_semana_db = dia_semana + 1
     
+    # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
+    horarios_especiais = HorarioEspecial.query.filter(
+        HorarioEspecial.data == data
+    ).all()
+    
+    horarios_barbeiros = HorarioBarbeiro.query.filter(
+        HorarioBarbeiro.dia_semana == dia_semana_db,
+        HorarioBarbeiro.ativo == True
+    ).all()
+    
+    # Criar dicts para busca O(1)
+    especiais_por_barbeiro = {h.barbeiro_id: h for h in horarios_especiais if h.barbeiro_id}
+    especial_geral = next((h for h in horarios_especiais if h.barbeiro_id is None), None)
+    horarios_dict = {h.barbeiro_id: h for h in horarios_barbeiros}
+    
     barbeiros_disponiveis = []
     
     for barbeiro in barbeiros:
-        # Verificar se existe horário especial para este barbeiro nesta data
-        horario_especial = HorarioEspecial.query.filter_by(
-            data=data,
-            barbeiro_id=barbeiro.id
-        ).first()
-        
-        if horario_especial:
+        # Verificações rápidas (dicts/set lookups)
+        if barbeiro.id in especiais_por_barbeiro:
             # Barbeiro tem horário especial - está disponível
             barbeiros_disponiveis.append(barbeiro)
-            continue
-        
-        # Verificar se existe horário especial para todos os barbeiros nesta data
-        horario_especial_geral = HorarioEspecial.query.filter_by(
-            data=data,
-            barbeiro_id=None
-        ).first()
-        
-        if horario_especial_geral:
+        elif especial_geral:
             # Tem horário especial geral - barbeiro está disponível
             barbeiros_disponiveis.append(barbeiro)
-            continue
-        
-        # Verificar se barbeiro trabalha neste dia da semana
-        horario_barbeiro = HorarioBarbeiro.query.filter_by(
-            barbeiro_id=barbeiro.id,
-            dia_semana=dia_semana_db,
-            ativo=True
-        ).first()
-        
-        if horario_barbeiro:
+        elif barbeiro.id in horarios_dict:
             # Barbeiro trabalha neste dia
             barbeiros_disponiveis.append(barbeiro)
     
     return jsonify({
         'barbeiros': [b.to_dict() for b in barbeiros_disponiveis]
+    })
+
+@api_bp.route('/barbeiro/<int:barbeiro_id>/horarios', methods=['GET'])
+def get_horarios_barbeiro(barbeiro_id):
+    """Retorna horários de um barbeiro (com cache)"""
+    barbeiro = Barbeiro.query.get(barbeiro_id)
+    if not barbeiro:
+        return jsonify({'erro': 'Barbeiro não encontrado'}), 404
+    
+    # Uma única query otimizada
+    horarios = HorarioBarbeiro.query.filter_by(
+        barbeiro_id=barbeiro_id,
+        ativo=True
+    ).order_by(HorarioBarbeiro.dia_semana).all()
+    
+    # Mapear dias da semana para nomes
+    dias_nomes = {
+        0: 'Domingo',
+        1: 'Segunda',
+        2: 'Terça',
+        3: 'Quarta',
+        4: 'Quinta',
+        5: 'Sexta',
+        6: 'Sábado'
+    }
+    
+    horarios_dict = {}
+    for h in horarios:
+        dia_nome = dias_nomes[h.dia_semana]
+        horarios_dict[dia_nome] = {
+            'inicio': h.horario_inicio,
+            'fim': h.horario_fim,
+            'almoco_inicio': h.intervalo_almoco_inicio,
+            'almoco_fim': h.intervalo_almoco_fim
+        }
+    
+    return jsonify({
+        'barbeiro_id': barbeiro_id,
+        'barbeiro_nome': barbeiro.nome,
+        'horarios': horarios_dict
     })
 
 @admin_bp.route('/barbeiros', methods=['GET'])

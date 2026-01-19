@@ -1,12 +1,44 @@
-# 🆓 WHATSAPP GRATUITO com Oracle Cloud Always Free
+# 🆓 INFRAESTRUTURA COMPLETA GRATUITA - Oracle Cloud + Supabase
 
-## ✅ O que é Oracle Cloud Always Free?
+## ✅ Arquitetura Recomendada
+
+```
+┌─────────────────────────────────────────┐
+│        🌐 SITE + WHATSAPP API            │
+│     VM Oracle Cloud (1GB RAM)            │
+│   Flask + Python + Google Chrome         │
+│          Porta 5001, 5000                │
+└─────────────────────────────────────────┘
+              ↓ Conecta via HTTPS
+┌─────────────────────────────────────────┐
+│      🗄️ BANCO DE DADOS (MELHOR!)        │
+│        Supabase PostgreSQL               │
+│  500MB Gratuito + Backups Automáticos    │
+│   Gerenciado + SSL + 99.9% Uptime       │
+└─────────────────────────────────────────┘
+```
+
+## 📊 Comparação: Onde Colocar o Banco?
+
+| Opção | Vantagem | Desvantagem | Custo |
+|-------|----------|------------|--------|
+| **Supabase** ⭐ | PostgreSQL gerenciado, SSL, backups | Limite 500MB | GRÁTIS |
+| Oracle Cloud | Controle total | Consome RAM da VM | GRÁTIS |
+| PlanetScale | MySQL escalável | Sem tier grátis novamente | $10/mês |
+| Railway | Simples | Limite de uso | $5/mês |
+
+**Recomendação: SUPABASE** ✅ (Melhor custo-benefício)
+
+---
+
+## ✅ O que você terá de GRATUITO?
 
 - **GRÁTIS PARA SEMPRE** (não é trial)
-- 2 VMs com 1GB RAM cada
-- 100GB de armazenamento
+- 2 VMs Oracle Cloud com 1GB RAM cada
+- PostgreSQL Supabase 500MB
+- 100GB de armazenamento Oracle
 - Sem cartão de crédito necessário
-- Perfeito para WhatsApp
+- **Tudo rodando em produção**
 
 ---
 
@@ -209,7 +241,98 @@ echo ""
 
 ---
 
-## 🚀 PASSO 8: Criar Serviço Automático
+## �️ PASSO 7.5: Criar Banco de Dados Supabase (MELHOR LOCAL!)
+
+### 7.5.1 Criar Conta Supabase
+1. Acesse: https://supabase.com
+2. Clique **"Start your project"**
+3. Logue com GitHub ou email
+4. Clique **"New Project"**
+
+### 7.5.2 Configurar Projeto
+```
+Nome do Projeto: barbershop-db
+Região: São Paulo (Melhor latência)
+Database Password: Gere uma senha forte (copie!)
+Plano: Free (500MB)
+```
+
+### 7.5.3 Copiar Credenciais
+Após criar, vá em **Settings** → **Database**:
+```
+Host: xxxxx.supabase.co
+Port: 5432
+User: postgres
+Password: (a senha que você criou)
+Database: postgres
+```
+
+**Copie isso e guarde!**
+
+### 7.5.4 Criar Tabelas (Executar no Editor SQL)
+
+Na aba **SQL Editor**, execute:
+
+```sql
+-- Tabela de Barbeiros
+CREATE TABLE barbeiros (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  telefone VARCHAR(20) NOT NULL UNIQUE,
+  email VARCHAR(100),
+  data_criacao TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabela de Serviços
+CREATE TABLE servicos (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  duracao_minutos INTEGER DEFAULT 30,
+  preco DECIMAL(10,2),
+  data_criacao TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabela de Agendamentos
+CREATE TABLE agendamentos (
+  id SERIAL PRIMARY KEY,
+  barbeiro_id INTEGER REFERENCES barbeiros(id),
+  cliente_nome VARCHAR(100),
+  cliente_telefone VARCHAR(20),
+  data_agendamento TIMESTAMP,
+  servico_id INTEGER REFERENCES servicos(id),
+  status VARCHAR(20) DEFAULT 'pendente',
+  data_criacao TIMESTAMP DEFAULT NOW()
+);
+
+-- Índices para performance
+CREATE INDEX idx_agendamentos_data ON agendamentos(data_agendamento);
+CREATE INDEX idx_agendamentos_barbeiro ON agendamentos(barbeiro_id);
+```
+
+---
+
+## 🔗 Conectar seu App Python ao Supabase
+
+### No arquivo `.env` da VM, adicione:
+
+```bash
+# Banco de dados Supabase
+DATABASE_URL=postgresql://postgres:SUA-SENHA@xxxxx.supabase.co:5432/postgres
+SUPABASE_HOST=xxxxx.supabase.co
+SUPABASE_PASSWORD=SUA-SENHA
+```
+
+### Instalar driver PostgreSQL:
+
+```bash
+cd ~/whatsapp-server
+source venv/bin/activate
+pip install psycopg2-binary SQLAlchemy python-dotenv
+```
+
+---
+
+## �🚀 PASSO 8: Criar Serviço Automático
 
 ```bash
 # Criar serviço systemd
@@ -304,6 +427,7 @@ sudo journalctl -u whatsapp-api -f
 ```env
 WHATSAPP_API_URL=http://SEU-IP-ORACLE:5001
 WHATSAPP_API_TOKEN=sua-senha-que-copiou
+DATABASE_URL=postgresql://postgres:sua-senha@xxxxx.supabase.co:5432/postgres
 ```
 
 5. **Save Changes**
@@ -311,9 +435,114 @@ WHATSAPP_API_TOKEN=sua-senha-que-copiou
 
 ---
 
-## ✅ PASSO 11: Testar
+## 🗄️ PASSO 10.5: Migrar Dados do SQLite para Supabase
 
-### Teste 1: Health Check
+### Se você já tem dados localmente:
+
+```bash
+cd ~/whatsapp-server
+source venv/bin/activate
+
+# Criar script de migração
+cat > migrar_dados.py << 'EOF'
+import sqlite3
+import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Conexão SQLite (origem - local)
+sqlite_conn = sqlite3.connect('instance/barbearia.db')
+sqlite_cursor = sqlite_conn.cursor()
+
+# Conexão PostgreSQL (destino - Supabase)
+pg_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+pg_cursor = pg_conn.cursor()
+
+# Migrar Barbeiros
+try:
+    sqlite_cursor.execute("SELECT * FROM barbeiros")
+    barbeiros = sqlite_cursor.fetchall()
+    for barbeiro in barbeiros:
+        pg_cursor.execute(
+            "INSERT INTO barbeiros (id, nome, telefone, email) VALUES (%s, %s, %s, %s)",
+            barbeiro
+        )
+    pg_conn.commit()
+    print(f"✅ {len(barbeiros)} barbeiros migrados!")
+except Exception as e:
+    print(f"⚠️ Erro ao migrar barbeiros: {e}")
+
+# Migrar Serviços
+try:
+    sqlite_cursor.execute("SELECT * FROM servicos")
+    servicos = sqlite_cursor.fetchall()
+    for servico in servicos:
+        pg_cursor.execute(
+            "INSERT INTO servicos (id, nome, duracao_minutos, preco) VALUES (%s, %s, %s, %s)",
+            servico
+        )
+    pg_conn.commit()
+    print(f"✅ {len(servicos)} serviços migrados!")
+except Exception as e:
+    print(f"⚠️ Erro ao migrar serviços: {e}")
+
+# Migrar Agendamentos
+try:
+    sqlite_cursor.execute("SELECT * FROM agendamentos")
+    agendamentos = sqlite_cursor.fetchall()
+    for agendamento in agendamentos:
+        pg_cursor.execute(
+            "INSERT INTO agendamentos (id, barbeiro_id, cliente_nome, cliente_telefone, data_agendamento, servico_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            agendamento
+        )
+    pg_conn.commit()
+    print(f"✅ {len(agendamentos)} agendamentos migrados!")
+except Exception as e:
+    print(f"⚠️ Erro ao migrar agendamentos: {e}")
+
+sqlite_conn.close()
+pg_conn.close()
+print("🎉 Migração concluída!")
+EOF
+
+# Executar migração
+python3 migrar_dados.py
+```
+
+---
+
+## ✅ PASSO 11: Testar Banco de Dados
+
+### Teste 1: Conectar ao Supabase
+```bash
+cd ~/whatsapp-server
+source venv/bin/activate
+
+# Testar conexão
+cat > testar_bd.py << 'EOF'
+import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+try:
+    conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+    cursor = conn.cursor()
+    cursor.execute("SELECT NOW()")
+    resultado = cursor.fetchone()
+    print(f"✅ Conectado ao Supabase! Hora: {resultado[0]}")
+    conn.close()
+except Exception as e:
+    print(f"❌ Erro: {e}")
+EOF
+
+python3 testar_bd.py
+```
+
+### Teste 2: Health Check da API
 ```bash
 curl http://SEU-IP:5001/health
 ```
@@ -449,9 +678,40 @@ sudo systemctl start whatsapp-api
 
 Seu sistema de WhatsApp está 100% GRATUITO e funcionando em produção!
 
+**Infraestrutura Completa:**
+- 🌐 Site + API WhatsApp: Oracle Cloud (GRÁTIS ♾️)
+- 🗄️ Banco de Dados: Supabase PostgreSQL (GRÁTIS ♾️)
+- 📊 Backups: Automáticos diariamente
+- 🔒 SSL: Incluso no Supabase
+- ⚡ Latência: Melhor latência com Supabase São Paulo
+
 **Custo mensal**: R$ 0,00 ✅
-**Tempo de configuração**: 30 minutos ⏱️
+**Tempo de configuração**: 45 minutos ⏱️
 **Funciona para sempre**: Sim! ♾️
+
+---
+
+## 📊 Resumo da Arquitetura
+
+```
+USUÁRIO
+  ↓
+  ├─→ 🌐 SITE (Flask no Oracle Cloud)
+  │   ├─ Página inicial
+  │   ├─ Agendar serviço
+  │   └─ Admin dashboard
+  │
+  ├─→ 📱 WHATSAPP (Selenium no Oracle Cloud)
+  │   ├─ Confirmações automáticas
+  │   ├─ Lembretes 24h antes
+  │   └─ Cancelamentos
+  │
+  └─→ 🗄️ SUPABASE (PostgreSQL)
+      ├─ Barbeiros
+      ├─ Serviços
+      ├─ Agendamentos
+      └─ Histórico de mensagens
+```
 
 ---
 
@@ -460,7 +720,19 @@ Seu sistema de WhatsApp está 100% GRATUITO e funcionando em produção!
 1. ✅ Criar conta Oracle Cloud
 2. ✅ Criar VM
 3. ✅ Instalar dependências
-4. ✅ Configurar serviço
-5. ✅ Escanear QR Code
-6. ✅ Configurar Render
-7. 🎉 Testar e usar!
+4. ✅ Criar conta Supabase
+5. ✅ Migrar dados
+6. ✅ Configurar variáveis de ambiente
+7. ✅ Testar banco de dados
+8. ✅ Configurar Render
+9. 🎉 Testar e usar!
+
+---
+
+## 🆘 Precisa de Ajuda?
+
+Se algo não funcionar:
+1. Verifique o arquivo `.env` com as credenciais corretas
+2. Teste a conexão com Supabase
+3. Veja os logs: `sudo journalctl -u whatsapp-api -f`
+4. Reinicie o serviço: `sudo systemctl restart whatsapp-api`

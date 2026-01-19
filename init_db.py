@@ -5,7 +5,7 @@ Execute este script para criar o banco e dados iniciais
 
 from app import app
 from database import db
-from models import ConfiguracaoBarbearia, Agendamento, Cliente, Barbeiro, Servico
+from models import ConfiguracaoBarbearia, Agendamento, Cliente, Barbeiro, Servico, HorarioBarbeiro
 from datetime import datetime, timedelta
 
 def inicializar_banco():
@@ -139,6 +139,83 @@ def inicializar_banco():
         
         db.session.commit()
         print(f"✅ Serviços associados aos barbeiros!")
+        
+        # Criar horários para os barbeiros (Segunda a Sábado)
+        print("\n⏰ Criando horários dos barbeiros...")
+        horarios_criados = 0
+        
+        for barbeiro in barbeiros:
+            # Verificar se barbeiro já tem horários configurados
+            if HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro.id).count() == 0:
+                # Criar horários padrão para Segunda (1) a Sábado (6)
+                # Segunda a Sexta: 09:00-19:00 com almoço 12:00-13:00
+                # Sábado: 08:00-14:00 sem almoço
+                
+                horarios_semana = [
+                    # Segunda a Sexta
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=1,  # Segunda
+                        horario_inicio="09:00",
+                        horario_fim="19:00",
+                        intervalo_almoco_inicio="12:00",
+                        intervalo_almoco_fim="13:00",
+                        ativo=True
+                    ),
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=2,  # Terça
+                        horario_inicio="09:00",
+                        horario_fim="19:00",
+                        intervalo_almoco_inicio="12:00",
+                        intervalo_almoco_fim="13:00",
+                        ativo=True
+                    ),
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=3,  # Quarta
+                        horario_inicio="09:00",
+                        horario_fim="19:00",
+                        intervalo_almoco_inicio="12:00",
+                        intervalo_almoco_fim="13:00",
+                        ativo=True
+                    ),
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=4,  # Quinta
+                        horario_inicio="09:00",
+                        horario_fim="19:00",
+                        intervalo_almoco_inicio="12:00",
+                        intervalo_almoco_fim="13:00",
+                        ativo=True
+                    ),
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=5,  # Sexta
+                        horario_inicio="09:00",
+                        horario_fim="19:00",
+                        intervalo_almoco_inicio="12:00",
+                        intervalo_almoco_fim="13:00",
+                        ativo=True
+                    ),
+                    # Sábado
+                    HorarioBarbeiro(
+                        barbeiro_id=barbeiro.id,
+                        dia_semana=6,  # Sábado
+                        horario_inicio="08:00",
+                        horario_fim="14:00",
+                        intervalo_almoco_inicio=None,
+                        intervalo_almoco_fim=None,
+                        ativo=True
+                    ),
+                ]
+                
+                for horario in horarios_semana:
+                    db.session.add(horario)
+                    horarios_criados += 1
+        
+        db.session.commit()
+        print(f"✅ {horarios_criados} horários criados para os barbeiros!")
         
         # Criar alguns agendamentos de exemplo (opcional)
         criar_agendamentos_exemplo = input("\n❓ Deseja criar agendamentos de exemplo? (s/n): ").lower()
