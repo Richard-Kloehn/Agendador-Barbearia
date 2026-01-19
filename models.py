@@ -92,7 +92,7 @@ class Agendamento(db.Model):
     nome_cliente = db.Column(db.String(100), nullable=False)
     telefone = db.Column(db.String(20), nullable=True, default='')
     data_hora = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(20), default='pendente')  # pendente, confirmado, cancelado, concluido
+    status = db.Column(db.String(20), default='confirmado')  # confirmado, cancelado, concluido
     token_confirmacao = db.Column(db.String(100), unique=True)
     lembrete_enviado = db.Column(db.Boolean, default=False)
     confirmado_cliente = db.Column(db.Boolean, default=False)
@@ -161,20 +161,56 @@ class HorarioEspecial(db.Model):
     __tablename__ = 'horarios_especiais'
     
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.Date, nullable=False, unique=True)
+    data = db.Column(db.Date, nullable=False)
+    barbeiro_id = db.Column(db.Integer, db.ForeignKey('barbeiros.id'), nullable=True)  # null = todos os barbeiros
     descricao = db.Column(db.String(200))  # Ex: "Feriado", "Horário Reduzido"
     horario_abertura = db.Column(db.String(5))  # Ex: "09:00"
     horario_fechamento = db.Column(db.String(5))  # Ex: "14:00"
     intervalo_almoco_inicio = db.Column(db.String(5))
     intervalo_almoco_fim = db.Column(db.String(5))
     
+    # Relacionamento
+    barbeiro = db.relationship('Barbeiro', backref='horarios_especiais', lazy=True)
+    
     def to_dict(self):
         return {
             'id': self.id,
             'data': self.data.isoformat() if self.data else None,
+            'barbeiro_id': self.barbeiro_id,
+            'barbeiro_nome': self.barbeiro.nome if self.barbeiro else 'Todos',
             'descricao': self.descricao,
             'horario_abertura': self.horario_abertura,
             'horario_fechamento': self.horario_fechamento,
             'intervalo_almoco_inicio': self.intervalo_almoco_inicio,
             'intervalo_almoco_fim': self.intervalo_almoco_fim
+        }
+
+class HorarioBarbeiro(db.Model):
+    __tablename__ = 'horarios_barbeiros'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    barbeiro_id = db.Column(db.Integer, db.ForeignKey('barbeiros.id'), nullable=False)
+    dia_semana = db.Column(db.Integer, nullable=False)  # 0=domingo, 1=segunda, ..., 6=sábado
+    horario_inicio = db.Column(db.String(5), nullable=False)  # Ex: "09:00"
+    horario_fim = db.Column(db.String(5), nullable=False)  # Ex: "18:00"
+    intervalo_almoco_inicio = db.Column(db.String(5))
+    intervalo_almoco_fim = db.Column(db.String(5))
+    ativo = db.Column(db.Boolean, default=True)
+    
+    # Relacionamento
+    barbeiro_rel = db.relationship('Barbeiro', backref='horarios', lazy=True)
+    
+    def to_dict(self):
+        dias_semana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+        return {
+            'id': self.id,
+            'barbeiro_id': self.barbeiro_id,
+            'barbeiro_nome': self.barbeiro_rel.nome if self.barbeiro_rel else None,
+            'dia_semana': self.dia_semana,
+            'dia_semana_nome': dias_semana[self.dia_semana],
+            'horario_inicio': self.horario_inicio,
+            'horario_fim': self.horario_fim,
+            'intervalo_almoco_inicio': self.intervalo_almoco_inicio,
+            'intervalo_almoco_fim': self.intervalo_almoco_fim,
+            'ativo': self.ativo
         }

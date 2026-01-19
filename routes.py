@@ -1,9 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, timedelta, time
 from database import db
-from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico
+from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro
 from services.whatsapp_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
+from werkzeug.utils import secure_filename
 import re
+import os
 
 api_bp = Blueprint('api', __name__)
 admin_bp = Blueprint('admin', __name__)
@@ -17,8 +19,14 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
     """Gera lista de horários disponíveis para uma data, barbeiro e serviço específicos"""
     horarios = []
     
-    # Verificar se existe horário especial para esta data
-    horario_especial = HorarioEspecial.query.filter_by(data=data).first()
+    if not barbeiro_id:
+        return horarios
+    
+    # Verificar se existe horário especial para esta data e barbeiro
+    horario_especial = HorarioEspecial.query.filter_by(data=data, barbeiro_id=barbeiro_id).first()
+    if not horario_especial:
+        # Tentar horário especial para todos os barbeiros
+        horario_especial = HorarioEspecial.query.filter_by(data=data, barbeiro_id=None).first()
     
     if horario_especial:
         # Usar horários especiais
@@ -30,14 +38,30 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
             almoco_inicio = datetime.strptime(horario_especial.intervalo_almoco_inicio, '%H:%M').time()
             almoco_fim = datetime.strptime(horario_especial.intervalo_almoco_fim, '%H:%M').time()
     else:
-        # Usar horários normais da configuração
-        hora_inicio = datetime.strptime(config.horario_abertura, '%H:%M').time()
-        hora_fim = datetime.strptime(config.horario_fechamento, '%H:%M').time()
+        # Usar horários do barbeiro
+        dia_semana = data.weekday()  # 0=segunda, 6=domingo
+        if dia_semana == 6:  # domingo
+            dia_semana = 0
+        else:
+            dia_semana += 1
+        
+        horario_barbeiro = HorarioBarbeiro.query.filter_by(
+            barbeiro_id=barbeiro_id, 
+            dia_semana=dia_semana,
+            ativo=True
+        ).first()
+        
+        if not horario_barbeiro:
+            # Barbeiro não trabalha neste dia
+            return []
+        
+        hora_inicio = datetime.strptime(horario_barbeiro.horario_inicio, '%H:%M').time()
+        hora_fim = datetime.strptime(horario_barbeiro.horario_fim, '%H:%M').time()
         almoco_inicio = None
         almoco_fim = None
-        if config.intervalo_almoco_inicio and config.intervalo_almoco_fim:
-            almoco_inicio = datetime.strptime(config.intervalo_almoco_inicio, '%H:%M').time()
-            almoco_fim = datetime.strptime(config.intervalo_almoco_fim, '%H:%M').time()
+        if horario_barbeiro.intervalo_almoco_inicio and horario_barbeiro.intervalo_almoco_fim:
+            almoco_inicio = datetime.strptime(horario_barbeiro.intervalo_almoco_inicio, '%H:%M').time()
+            almoco_fim = datetime.strptime(horario_barbeiro.intervalo_almoco_fim, '%H:%M').time()
     
     # Usar duração do serviço se fornecida, senão usar configuração
     if duracao_servico:
@@ -156,6 +180,69 @@ def buscar_cliente():
         'clientes': [c.to_dict() for c in clientes]
     })
 
+@api_bp.route('/datas-disponiveis', methods=['GET'])
+def listar_datas_disponiveis():
+    """Retorna informações sobre disponibilidade de datas para os próximos 90 dias"""
+    hoje = datetime.now().date()
+    data_final = hoje + timedelta(days=90)
+    
+    # Buscar dias bloqueados
+    dias_bloqueados = DiaIndisponivel.query.filter(
+        DiaIndisponivel.data >= hoje,
+        DiaIndisponivel.data <= data_final
+    ).all()
+    
+    datas_bloqueadas = [d.data.strftime('%Y-%m-%d') for d in dias_bloqueados]
+    
+    # Verificar quais dias da semana têm barbeiros trabalhando
+    barbeiros_ativos = Barbeiro.query.filter_by(ativo=True).all()
+    
+    # Mapear dias da semana que têm pelo menos um barbeiro
+    dias_com_barbeiros = set()
+    for barbeiro in barbeiros_ativos:
+        horarios = HorarioBarbeiro.query.filter_by(
+            barbeiro_id=barbeiro.id,
+            ativo=True
+        ).all()
+        for horario in horarios:
+            dias_com_barbeiros.add(horario.dia_semana)
+    
+    # Gerar lista de datas indisponíveis
+    datas_indisponiveis = []
+    data_atual = hoje
+    
+    while data_atual <= data_final:
+        data_str = data_atual.strftime('%Y-%m-%d')
+        
+        # Verificar se está bloqueada
+        if data_str in datas_bloqueadas:
+            datas_indisponiveis.append(data_str)
+            data_atual += timedelta(days=1)
+            continue
+        
+        # Verificar se tem horário especial (sempre disponível se tiver)
+        horario_especial = HorarioEspecial.query.filter_by(data=data_atual).first()
+        if horario_especial:
+            data_atual += timedelta(days=1)
+            continue
+        
+        # Verificar dia da semana
+        dia_semana = data_atual.weekday()  # 0=segunda, 6=domingo
+        if dia_semana == 6:  # domingo
+            dia_semana_db = 0
+        else:
+            dia_semana_db = dia_semana + 1
+        
+        # Se não tem nenhum barbeiro neste dia da semana
+        if dia_semana_db not in dias_com_barbeiros:
+            datas_indisponiveis.append(data_str)
+        
+        data_atual += timedelta(days=1)
+    
+    return jsonify({
+        'datas_indisponiveis': datas_indisponiveis
+    })
+
 @api_bp.route('/agendar', methods=['POST'])
 def criar_agendamento():
     """Cria novo agendamento e salva/atualiza dados do cliente"""
@@ -236,7 +323,7 @@ def criar_agendamento():
         data_hora=data_hora,
         barbeiro_id=barbeiro_id,
         servico_id=servico_id,
-        status='pendente',
+        status='confirmado',
         observacoes=dados.get('observacoes', '')
     )
     
@@ -281,15 +368,81 @@ def confirmar_agendamento_api(token):
     
     return jsonify({'mensagem': mensagem})
 
+@api_bp.route('/meus-agendamentos', methods=['GET'])
+def meus_agendamentos():
+    """Busca agendamentos por telefone e opcionalmente por nome"""
+    telefone = request.args.get('telefone')
+    nome = request.args.get('nome')
+    
+    if not telefone:
+        return jsonify({'erro': 'Telefone é obrigatório'}), 400
+    
+    # Buscar agendamentos futuros ou recentes (últimos 7 dias)
+    data_limite = datetime.now() - timedelta(days=7)
+    
+    # Buscar por telefone, excluindo cancelados
+    query = Agendamento.query.filter(
+        Agendamento.telefone == telefone,
+        Agendamento.data_hora >= data_limite,
+        Agendamento.status != 'cancelado'
+    )
+    
+    # Se nome foi fornecido, filtrar também por nome (case insensitive)
+    if nome:
+        query = query.filter(Agendamento.nome_cliente.ilike(f'%{nome}%'))
+    
+    agendamentos = query.order_by(Agendamento.data_hora.asc()).all()
+    
+    return jsonify({
+        'agendamentos': [a.to_dict() for a in agendamentos]
+    })
+
+@api_bp.route('/cancelar-agendamento/<int:id>', methods=['PUT'])
+def cancelar_agendamento_cliente(id):
+    """Permite cliente cancelar seu próprio agendamento"""
+    agendamento = Agendamento.query.get_or_404(id)
+    
+    # Verificar se agendamento já passou
+    if agendamento.data_hora < datetime.now():
+        return jsonify({'erro': 'Não é possível cancelar agendamentos passados'}), 400
+    
+    # Verificar se já está cancelado
+    if agendamento.status == 'cancelado':
+        return jsonify({'erro': 'Este agendamento já foi cancelado'}), 400
+    
+    agendamento.status = 'cancelado'
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Agendamento cancelado com sucesso'})
+
 # ========== ROTAS ADMIN ==========
 
 @admin_bp.route('/agendamentos', methods=['GET'])
 def listar_agendamentos():
     """Lista todos os agendamentos"""
+    barbeiro_id = request.args.get('barbeiro_id', type=int)
     data_str = request.args.get('data')
     status = request.args.get('status')
+    data_inicio_str = request.args.get('data_inicio')
+    data_fim_str = request.args.get('data_fim')
+    
+    # Atualizar automaticamente agendamentos confirmados que já passaram do horário
+    agora = datetime.now()
+    agendamentos_passados = Agendamento.query.filter(
+        Agendamento.status == 'confirmado',
+        Agendamento.data_hora < agora
+    ).all()
+    
+    for ag in agendamentos_passados:
+        ag.status = 'concluido'
+    
+    if agendamentos_passados:
+        db.session.commit()
     
     query = Agendamento.query
+    
+    if barbeiro_id:
+        query = query.filter_by(barbeiro_id=barbeiro_id)
     
     if data_str:
         try:
@@ -297,6 +450,23 @@ def listar_agendamentos():
             inicio = datetime.combine(data, time.min)
             fim = datetime.combine(data, time.max)
             query = query.filter(Agendamento.data_hora >= inicio, Agendamento.data_hora <= fim)
+        except ValueError:
+            pass
+    
+    # Filtros de período (para dashboard)
+    if data_inicio_str:
+        try:
+            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
+            inicio = datetime.combine(data_inicio, time.min)
+            query = query.filter(Agendamento.data_hora >= inicio)
+        except ValueError:
+            pass
+    
+    if data_fim_str:
+        try:
+            data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+            fim = datetime.combine(data_fim, time.max)
+            query = query.filter(Agendamento.data_hora <= fim)
         except ValueError:
             pass
     
@@ -406,6 +576,70 @@ def get_estatisticas():
         'confirmados': confirmados
     })
 
+@admin_bp.route('/estatisticas-barbeiros', methods=['GET'])
+def get_estatisticas_barbeiros():
+    """Retorna estatísticas de atendimentos por barbeiro e serviço em um período"""
+    from sqlalchemy import func
+    
+    # Obter parâmetros de data e barbeiro
+    barbeiro_id = request.args.get('barbeiro_id', type=int)
+    data_inicio_str = request.args.get('data_inicio')
+    data_fim_str = request.args.get('data_fim')
+    
+    # Query base
+    query = db.session.query(
+        Barbeiro.nome.label('barbeiro_nome'),
+        Servico.nome.label('servico_nome'),
+        func.count(Agendamento.id).label('quantidade')
+    ).join(
+        Agendamento, Agendamento.barbeiro_id == Barbeiro.id
+    ).join(
+        Servico, Agendamento.servico_id == Servico.id
+    ).filter(
+        Agendamento.status.in_(['confirmado', 'concluido'])
+    )
+    
+    # Aplicar filtro de barbeiro se fornecido
+    if barbeiro_id:
+        query = query.filter(Barbeiro.id == barbeiro_id)
+    
+    # Aplicar filtros de data se fornecidos
+    if data_inicio_str:
+        try:
+            data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
+            inicio_dia = datetime.combine(data_inicio, time.min)
+            query = query.filter(Agendamento.data_hora >= inicio_dia)
+        except ValueError:
+            pass
+    
+    if data_fim_str:
+        try:
+            data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+            fim_dia = datetime.combine(data_fim, time.max)
+            query = query.filter(Agendamento.data_hora <= fim_dia)
+        except ValueError:
+            pass
+    
+    # Agrupar por barbeiro e serviço
+    resultados = query.group_by(
+        Barbeiro.nome, Servico.nome
+    ).order_by(
+        Barbeiro.nome, func.count(Agendamento.id).desc()
+    ).all()
+    
+    # Formatar resultados
+    estatisticas = []
+    for resultado in resultados:
+        estatisticas.append({
+            'barbeiro_nome': resultado.barbeiro_nome,
+            'servico_nome': resultado.servico_nome,
+            'quantidade': resultado.quantidade
+        })
+    
+    return jsonify({
+        'estatisticas': estatisticas
+    })
+
 # ===== ROTAS DE HORÁRIOS ESPECIAIS =====
 
 @admin_bp.route('/horarios-especiais', methods=['GET'])
@@ -429,13 +663,22 @@ def criar_horario_especial():
     except ValueError:
         return jsonify({'erro': 'Formato de data inválido'}), 400
     
-    # Verificar se já existe
-    existente = HorarioEspecial.query.filter_by(data=data).first()
+    barbeiro_id = dados.get('barbeiro_id')
+    
+    # Verificar se já existe para esta data e barbeiro
+    query = HorarioEspecial.query.filter_by(data=data)
+    if barbeiro_id:
+        query = query.filter_by(barbeiro_id=barbeiro_id)
+    else:
+        query = query.filter_by(barbeiro_id=None)
+    
+    existente = query.first()
     if existente:
-        return jsonify({'erro': 'Já existe horário especial para esta data'}), 409
+        return jsonify({'erro': 'Já existe horário especial para esta data e barbeiro'}), 409
     
     horario = HorarioEspecial(
         data=data,
+        barbeiro_id=barbeiro_id if barbeiro_id else None,
         descricao=dados.get('descricao', ''),
         horario_abertura=dados['horario_abertura'],
         horario_fechamento=dados['horario_fechamento'],
@@ -467,10 +710,76 @@ def deletar_horario_especial(id):
 
 @api_bp.route('/barbeiros', methods=['GET'])
 def listar_barbeiros():
-    """Lista todos os barbeiros ativos"""
+    """Lista barbeiros ativos e disponíveis para uma data específica"""
+    data_str = request.args.get('data')
+    
+    # Se não tiver data, retorna todos os barbeiros ativos
+    if not data_str:
+        barbeiros = Barbeiro.query.filter_by(ativo=True).order_by(Barbeiro.ordem).all()
+        return jsonify({
+            'barbeiros': [b.to_dict() for b in barbeiros]
+        })
+    
+    # Converter string para objeto date
+    try:
+        data = datetime.strptime(data_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'erro': 'Formato de data inválido'}), 400
+    
+    # Verificar se a data está disponível (não está bloqueada)
+    dia_indisponivel = DiaIndisponivel.query.filter_by(data=data).first()
+    if dia_indisponivel:
+        # Data bloqueada - sem barbeiros disponíveis
+        return jsonify({'barbeiros': []})
+    
+    # Buscar todos os barbeiros ativos
     barbeiros = Barbeiro.query.filter_by(ativo=True).order_by(Barbeiro.ordem).all()
+    
+    # Filtrar barbeiros que trabalham neste dia da semana
+    dia_semana = data.weekday()  # 0=segunda, 6=domingo
+    if dia_semana == 6:  # domingo
+        dia_semana_db = 0
+    else:
+        dia_semana_db = dia_semana + 1
+    
+    barbeiros_disponiveis = []
+    
+    for barbeiro in barbeiros:
+        # Verificar se existe horário especial para este barbeiro nesta data
+        horario_especial = HorarioEspecial.query.filter_by(
+            data=data,
+            barbeiro_id=barbeiro.id
+        ).first()
+        
+        if horario_especial:
+            # Barbeiro tem horário especial - está disponível
+            barbeiros_disponiveis.append(barbeiro)
+            continue
+        
+        # Verificar se existe horário especial para todos os barbeiros nesta data
+        horario_especial_geral = HorarioEspecial.query.filter_by(
+            data=data,
+            barbeiro_id=None
+        ).first()
+        
+        if horario_especial_geral:
+            # Tem horário especial geral - barbeiro está disponível
+            barbeiros_disponiveis.append(barbeiro)
+            continue
+        
+        # Verificar se barbeiro trabalha neste dia da semana
+        horario_barbeiro = HorarioBarbeiro.query.filter_by(
+            barbeiro_id=barbeiro.id,
+            dia_semana=dia_semana_db,
+            ativo=True
+        ).first()
+        
+        if horario_barbeiro:
+            # Barbeiro trabalha neste dia
+            barbeiros_disponiveis.append(barbeiro)
+    
     return jsonify({
-        'barbeiros': [b.to_dict() for b in barbeiros]
+        'barbeiros': [b.to_dict() for b in barbeiros_disponiveis]
     })
 
 @admin_bp.route('/barbeiros', methods=['GET'])
@@ -557,6 +866,47 @@ def deletar_barbeiro(id):
     
     return jsonify({'mensagem': 'Barbeiro deletado'})
 
+@admin_bp.route('/upload-foto-barbeiro', methods=['POST'])
+def upload_foto_barbeiro():
+    """Faz upload da foto do barbeiro"""
+    if 'foto' not in request.files:
+        return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
+    
+    file = request.files['foto']
+    
+    if file.filename == '':
+        return jsonify({'erro': 'Nenhum arquivo selecionado'}), 400
+    
+    # Verificar extensão permitida
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    def allowed_file(filename):
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    
+    if not allowed_file(file.filename):
+        return jsonify({'erro': 'Formato de arquivo não permitido'}), 400
+    
+    # Criar nome seguro com timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = secure_filename(file.filename)
+    name, ext = os.path.splitext(filename)
+    new_filename = f"barbeiro_{timestamp}{ext}"
+    
+    # Criar diretório se não existir
+    upload_folder = os.path.join('static', 'img', 'barbeiros')
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    # Salvar arquivo
+    filepath = os.path.join(upload_folder, new_filename)
+    file.save(filepath)
+    
+    # Retornar URL relativa
+    foto_url = f"/static/img/barbeiros/{new_filename}"
+    
+    return jsonify({
+        'mensagem': 'Upload realizado com sucesso',
+        'foto_url': foto_url
+    }), 200
+
 # ===== ROTAS DE SERVIÇOS =====
 
 @api_bp.route('/servicos', methods=['GET'])
@@ -637,3 +987,101 @@ def deletar_servico(id):
     db.session.commit()
     
     return jsonify({'mensagem': 'Serviço deletado'})
+
+@admin_bp.route('/horarios-barbeiro/<int:barbeiro_id>', methods=['GET'])
+def get_horarios_barbeiro(barbeiro_id):
+    """Retorna horários de um barbeiro"""
+    barbeiro = Barbeiro.query.get(barbeiro_id)
+    if not barbeiro:
+        return jsonify({'erro': 'Barbeiro não encontrado'}), 404
+    
+    horarios = HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro_id).all()
+    
+    return jsonify({
+        'barbeiro': barbeiro.to_dict(),
+        'horarios': [h.to_dict() for h in horarios]
+    })
+
+@admin_bp.route('/horarios-barbeiro/<int:barbeiro_id>', methods=['POST'])
+def salvar_horarios_barbeiro(barbeiro_id):
+    """Salva/atualiza horários de um barbeiro"""
+    barbeiro = Barbeiro.query.get(barbeiro_id)
+    if not barbeiro:
+        return jsonify({'erro': 'Barbeiro não encontrado'}), 404
+    
+    dados = request.get_json()
+    horarios_novos = dados.get('horarios', [])
+    
+    # Deletar horários antigos
+    HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro_id).delete()
+    
+    # Adicionar novos horários
+    for h in horarios_novos:
+        horario = HorarioBarbeiro(
+            barbeiro_id=barbeiro_id,
+            dia_semana=h['dia_semana'],
+            horario_inicio=h['horario_inicio'],
+            horario_fim=h['horario_fim'],
+            intervalo_almoco_inicio=h.get('intervalo_almoco_inicio'),
+            intervalo_almoco_fim=h.get('intervalo_almoco_fim'),
+            ativo=True
+        )
+        db.session.add(horario)
+    
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Horários salvos com sucesso'})
+
+# ===== ROTAS DE DIAS INDISPONÍVEIS (FECHADOS) =====
+
+@admin_bp.route('/dias-indisponiveis', methods=['GET'])
+def listar_dias_indisponiveis():
+    """Lista todos os dias indisponíveis"""
+    dias = DiaIndisponivel.query.order_by(DiaIndisponivel.data).all()
+    return jsonify({
+        'dias_indisponiveis': [d.to_dict() for d in dias]
+    })
+
+@admin_bp.route('/dias-indisponiveis', methods=['POST'])
+def criar_dia_indisponivel():
+    """Marca um dia como fechado"""
+    dados = request.get_json()
+    
+    if not dados.get('data'):
+        return jsonify({'erro': 'Data é obrigatória'}), 400
+    
+    try:
+        data = datetime.strptime(dados['data'], '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'erro': 'Formato de data inválido'}), 400
+    
+    # Verificar se já existe
+    existente = DiaIndisponivel.query.filter_by(data=data).first()
+    if existente:
+        return jsonify({'erro': 'Este dia já está marcado como fechado'}), 409
+    
+    dia = DiaIndisponivel(
+        data=data,
+        motivo=dados.get('motivo', 'Fechado')
+    )
+    
+    db.session.add(dia)
+    db.session.commit()
+    
+    return jsonify({
+        'mensagem': 'Dia marcado como fechado',
+        'dia': dia.to_dict()
+    }), 201
+
+@admin_bp.route('/dias-indisponiveis/<int:id>', methods=['DELETE'])
+def deletar_dia_indisponivel(id):
+    """Remove um dia fechado"""
+    dia = DiaIndisponivel.query.get(id)
+    if not dia:
+        return jsonify({'erro': 'Dia não encontrado'}), 404
+    
+    db.session.delete(dia)
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Dia removido'})
+

@@ -12,6 +12,19 @@
         
         * {
             font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100vw;
+        }
+        
+        body {
+            position: relative;
         }
         
         .brand-title {
@@ -123,16 +136,58 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translate(-50%, -100%); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        /* Placeholder para campo de data */
+        .date-wrapper {
+            position: relative;
+        }
+        
+        .date-placeholder {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+            opacity: 1; /* Visível por padrão */
+        }
+        
+        .date-placeholder.hidden-placeholder {
+            opacity: 0;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen">
+    <!-- Sistema de Notificações -->
+    <div id="notificacao" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-50 min-w-80 max-w-md">
+        <div id="notificacaoContent" class="rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-down">
+            <i id="notificacaoIcon" class="text-2xl"></i>
+            <p id="notificacaoMensagem" class="flex-1 font-medium"></p>
+            <button onclick="fecharNotificacao()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
     <!-- Header -->
     <header class="py-4">
         <div class="container mx-auto px-4">
-            <div class="max-w-2xl mx-auto">
-                <div class="flex items-center justify-center gap-6 mb-2" style="margin-left: -8px;">
-                    <img src="/static/img/logo.png?v=3" alt="Navalha's Barber Club" class="h-32 md:h-40 logo-image">
-                    <div class="text-left">
+                <div class="flex items-center justify-center mb-2">
+                    <img src="/static/img/logo.png?v=3" alt="Navalha's Barber Club" class="h-32 md:h-40 logo-image" style="margin-left: -35px;">
+                    <div class="text-left" style="margin-left: -15px;">
                         <h1 class="brand-title text-6xl md:text-8xl leading-none mb-0">
                             Navalha's
                         </h1>
@@ -179,16 +234,17 @@
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-phone mr-2 gold-text"></i>WhatsApp (opcional)
+                                <i class="fas fa-phone mr-2 gold-text"></i>WhatsApp
                             </label>
                             <input type="tel" id="telefone" 
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
-                                placeholder="(11) 99999-9999">
+                                placeholder="(11) 99999-9999"
+                                required>
                             
                             <div class="mt-3">
                                 <label class="flex items-center cursor-pointer">
                                     <input type="checkbox" id="semWhatsApp" class="mr-2 w-4 h-4" onchange="toggleWhatsApp()">
-                                    <span class="text-sm text-gray-600">Não tenho ou não quero receber lembretes por WhatsApp</span>
+                                    <span class="text-sm text-gray-600">Não quero receber lembretes por WhatsApp</span>
                                 </label>
                             </div>
                             <p class="text-xs text-gray-500 mt-2" id="infoWhatsApp">
@@ -218,9 +274,15 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-calendar mr-2 gold-text"></i>Selecione o dia
                         </label>
-                        <input type="date" id="data" 
-                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
-                            onchange="carregarBarbeiros()">
+                        <div class="date-wrapper">
+                            <input type="date" id="data" 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                                onchange="carregarBarbeiros()">
+                            <div class="date-placeholder" id="datePlaceholder">
+                                <span>📅</span>
+                                <span>dd/mm/aaaa</span>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Container de Barbeiros -->
@@ -305,15 +367,6 @@
                         </div>
                     </div>
                     
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-comment mr-2 gold-text"></i>Observações (opcional)
-                        </label>
-                        <textarea id="observacoes" rows="3"
-                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
-                            placeholder="Alguma preferência ou observação?"></textarea>
-                    </div>
-                    
                     <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6" id="infoWhatsAppStep3">
                         <p class="text-sm text-gray-800">
                             <i class="fas fa-info-circle mr-2 gold-text"></i>
@@ -351,16 +404,67 @@
                 </div>
             </div>
             
-            <!-- Link para Admin -->
-            <div class="text-center mt-6">
-                <a href="/admin-login" class="text-white hover:text-gray-200 text-sm opacity-75">
-                    <i class="fas fa-lock mr-1"></i>Área Administrativa
+            <!-- Link para Cancelar Agendamento - Visível apenas no Step 1 -->
+            <div id="botaoCancelarExterno" class="text-center mt-6">
+                <button onclick="abrirModalCancelar()" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2.5 rounded-lg shadow-md transition transform hover:scale-105">
+                    <i class="fas fa-calendar-times mr-2"></i>Já tem agendamento? Clique aqui para cancelar
+                </button>
+            </div>
+            
+            <!-- Link Admin logo abaixo do botão de cancelamento -->
+            <div id="botaoAdminExterno" class="text-center mt-3">
+                <a href="/admin-login" class="inline-flex items-center gap-1.5 bg-gray-800 hover:bg-gray-900 text-white font-normal px-4 py-2 rounded-lg shadow-sm transition text-sm">
+                    <i class="fas fa-lock text-xs"></i>
+                    <span>Área Administrativa</span>
                 </a>
             </div>
         </div>
     </main>
     
     <script>
+        // Sistema de Notificações
+        let timeoutNotificacao;
+        let timeoutBuscaCancelamento;
+        
+        function mostrarNotificacao(mensagem, tipo = 'info') {
+            const notificacao = document.getElementById('notificacao');
+            const content = document.getElementById('notificacaoContent');
+            const icon = document.getElementById('notificacaoIcon');
+            const mensagemEl = document.getElementById('notificacaoMensagem');
+            
+            // Limpar timeout anterior
+            if (timeoutNotificacao) {
+                clearTimeout(timeoutNotificacao);
+            }
+            
+            // Configurar cores e ícones baseado no tipo
+            if (tipo === 'success') {
+                content.className = 'bg-green-500 text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-down';
+                icon.className = 'fas fa-check-circle text-2xl';
+            } else if (tipo === 'error') {
+                content.className = 'bg-red-500 text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-down';
+                icon.className = 'fas fa-exclamation-circle text-2xl';
+            } else if (tipo === 'warning') {
+                content.className = 'bg-yellow-500 text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-down';
+                icon.className = 'fas fa-exclamation-triangle text-2xl';
+            } else {
+                content.className = 'bg-blue-500 text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-down';
+                icon.className = 'fas fa-info-circle text-2xl';
+            }
+            
+            mensagemEl.textContent = mensagem;
+            notificacao.classList.remove('hidden');
+            
+            // Auto fechar após 4 segundos
+            timeoutNotificacao = setTimeout(() => {
+                fecharNotificacao();
+            }, 4000);
+        }
+        
+        function fecharNotificacao() {
+            document.getElementById('notificacao').classList.add('hidden');
+        }
+        
         let clienteSelecionado = null;
         let timeoutBusca = null;
 
@@ -452,11 +556,55 @@
         let barbeiroSelecionado = null;
         let servicoSelecionado = null;
         let dadosAgendamento = {};
+        let datasIndisponiveis = [];
 
-        // Configurar data mínima (hoje)
-        document.addEventListener('DOMContentLoaded', function() {
+        // Configurar data mínima (hoje) e carregar datas indisponíveis
+        document.addEventListener('DOMContentLoaded', async function() {
             const hoje = new Date().toISOString().split('T')[0];
-            document.getElementById('data').setAttribute('min', hoje);
+            const dataInput = document.getElementById('data');
+            const datePlaceholder = document.getElementById('datePlaceholder');
+            
+            dataInput.setAttribute('min', hoje);
+            
+            // Controlar visibilidade do placeholder
+            function atualizarPlaceholder() {
+                if (dataInput.value) {
+                    datePlaceholder.classList.add('hidden-placeholder');
+                } else {
+                    datePlaceholder.classList.remove('hidden-placeholder');
+                }
+            }
+            
+            // Verificar no carregamento
+            atualizarPlaceholder();
+            
+            // Atualizar ao mudar a data
+            dataInput.addEventListener('change', function() {
+                atualizarPlaceholder();
+            });
+            
+            dataInput.addEventListener('input', function() {
+                atualizarPlaceholder();
+            });
+            
+            dataInput.addEventListener('focus', function() {
+                // Oculta o placeholder ao focar
+                datePlaceholder.classList.add('hidden-placeholder');
+            });
+            
+            dataInput.addEventListener('blur', function() {
+                // Só mostra o placeholder se não tiver valor
+                atualizarPlaceholder();
+            });
+            
+            // Carregar datas indisponíveis
+            try {
+                const response = await fetch('/api/datas-disponiveis');
+                const dados = await response.json();
+                datasIndisponiveis = dados.datas_indisponiveis || [];
+            } catch (error) {
+                console.error('Erro ao carregar datas indisponíveis:', error);
+            }
             
             // Mask para telefone
             const telefoneInput = document.getElementById('telefone');
@@ -472,17 +620,11 @@
 
         function toggleWhatsApp() {
             const semWhatsApp = document.getElementById('semWhatsApp').checked;
-            const telefoneInput = document.getElementById('telefone');
             const infoWhatsApp = document.getElementById('infoWhatsApp');
             
             if (semWhatsApp) {
-                telefoneInput.disabled = true;
-                telefoneInput.value = '';
-                telefoneInput.classList.add('bg-gray-100');
-                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Você não receberá confirmações por WhatsApp';
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Telefone obrigatório para contato. Você não receberá lembretes por WhatsApp';
             } else {
-                telefoneInput.disabled = false;
-                telefoneInput.classList.remove('bg-gray-100');
                 infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes';
             }
         }
@@ -493,17 +635,24 @@
             const semWhatsApp = document.getElementById('semWhatsApp').checked;
             
             if (!nome) {
-                alert('Por favor, digite seu nome');
+                mostrarNotificacao('Por favor, digite seu nome', 'warning');
                 return;
             }
             
-            if (!semWhatsApp && (!telefone || telefone.length < 14)) {
-                alert('Por favor, digite um telefone válido ou marque a opção "Não tenho WhatsApp"');
+            if (!telefone) {
+                mostrarNotificacao('Por favor, digite seu telefone para contato', 'warning');
+                return;
+            }
+            
+            // Validar formato do telefone (mínimo 10 dígitos)
+            const telefoneNumeros = telefone.replace(/\D/g, '');
+            if (telefoneNumeros.length < 10) {
+                mostrarNotificacao('Por favor, digite um telefone válido', 'warning');
                 return;
             }
             
             dadosAgendamento.nome = nome;
-            dadosAgendamento.telefone = semWhatsApp ? 'Sem WhatsApp' : telefone;
+            dadosAgendamento.telefone = telefone;
             dadosAgendamento.semWhatsApp = semWhatsApp;
             
             mostrarStep(2);
@@ -560,6 +709,14 @@
             dadosAgendamento.servico_id = servicoSelecionado.id;
             
             mostrarStep(3);
+            
+            // Scroll automático para mostrar o botão de confirmar agendamento com margem extra
+            setTimeout(() => {
+                const btnFinalizar = document.getElementById('btnFinalizar');
+                const yOffset = 100; // Offset adicional para rolar mais para baixo
+                const y = btnFinalizar.getBoundingClientRect().top + window.pageYOffset - yOffset;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            }, 100);
         }
 
         function voltarStep(step) {
@@ -569,11 +726,32 @@
         function mostrarStep(numero) {
             document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
             document.getElementById('step' + numero).classList.remove('hidden');
+            
+            // Controlar visibilidade do botão de cancelar e admin
+            const botaoCancelar = document.getElementById('botaoCancelarExterno');
+            const botaoAdmin = document.getElementById('botaoAdminExterno');
+            if (numero === 1) {
+                botaoCancelar.classList.remove('hidden');
+                botaoAdmin.classList.remove('hidden');
+            } else {
+                botaoCancelar.classList.add('hidden');
+                botaoAdmin.classList.add('hidden');
+            }
         }
 
         async function carregarBarbeiros() {
             const data = document.getElementById('data').value;
             if (!data) return;
+            
+            // Validar se a data está disponível
+            if (datasIndisponiveis.includes(data)) {
+                mostrarNotificacao('Data indisponível. Por favor, escolha outra data.', 'error');
+                document.getElementById('data').value = '';
+                return;
+            }
+            
+            // Fechar notificação se havia uma exibida (data agora é válida)
+            fecharNotificacao();
             
             // Reset seleções
             barbeiroSelecionado = null;
@@ -594,7 +772,8 @@
             grid.innerHTML = '';
             
             try {
-                const response = await fetch('/api/barbeiros');
+                // Passar a data para filtrar apenas barbeiros disponíveis
+                const response = await fetch(`/api/barbeiros?data=${data}`);
                 const dados = await response.json();
                 
                 loading.classList.add('hidden');
@@ -620,7 +799,7 @@
                 }
             } catch (error) {
                 loading.classList.add('hidden');
-                alert('Erro ao carregar barbeiros. Tente novamente.');
+                mostrarNotificacao('Erro ao carregar barbeiros. Tente novamente.', 'error');
                 console.error(error);
             }
         }
@@ -683,6 +862,11 @@
                             grid.appendChild(div);
                         });
                         container.classList.remove('hidden');
+                        
+                        // Scroll automático para mostrar serviços
+                        setTimeout(() => {
+                            container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 100);
                     } else {
                         grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8"><i class="fas fa-briefcase text-4xl mb-2"></i><p>Nenhum serviço disponível para este barbeiro</p></div>';
                         container.classList.remove('hidden');
@@ -690,7 +874,7 @@
                 }
             } catch (error) {
                 loading.classList.add('hidden');
-                alert('Erro ao carregar serviços. Tente novamente.');
+                mostrarNotificacao('Erro ao carregar serviços. Tente novamente.', 'error');
                 console.error(error);
             }
         }
@@ -708,6 +892,14 @@
             
             // Carregar horários disponíveis
             await buscarHorarios();
+            
+            // Scroll automático para mostrar horários após carregar
+            setTimeout(() => {
+                const horariosContainer = document.getElementById('horariosContainer');
+                if (!horariosContainer.classList.contains('hidden')) {
+                    horariosContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 300);
         }
         
         async function buscarHorarios() {
@@ -749,7 +941,7 @@
                 }
             } catch (error) {
                 loading.classList.add('hidden');
-                alert('Erro ao buscar horários. Tente novamente.');
+                mostrarNotificacao('Erro ao buscar horários. Tente novamente.', 'error');
                 console.error(error);
             }
         }
@@ -759,6 +951,12 @@
             elemento.classList.add('selected');
             horarioSelecionado = horario;
             document.getElementById('btnContinuarStep3').classList.remove('hidden');
+            
+            // Scroll automático para mostrar botão continuar
+            setTimeout(() => {
+                const btnContinuar = document.getElementById('btnContinuarStep3');
+                btnContinuar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
         }
 
         async function confirmarAgendamento() {
@@ -767,7 +965,6 @@
             btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Confirmando...';
             
             const dataHora = `${dadosAgendamento.data}T${dadosAgendamento.horario}:00`;
-            const observacoes = document.getElementById('observacoes').value;
             
             try {
                 const response = await fetch('/api/agendar', {
@@ -775,11 +972,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         nome_cliente: dadosAgendamento.nome,
-                        telefone: dadosAgendamento.semWhatsApp ? '' : dadosAgendamento.telefone,
+                        telefone: dadosAgendamento.telefone,
                         data_hora: dataHora,
                         barbeiro_id: dadosAgendamento.barbeiro_id,
                         servico_id: dadosAgendamento.servico_id,
-                        observacoes: observacoes
+                        sem_whatsapp: dadosAgendamento.semWhatsApp
                     })
                 });
                 
@@ -797,12 +994,12 @@
                     }
                     mostrarStep(4);
                 } else {
-                    alert(resultado.erro || 'Erro ao criar agendamento');
+                    mostrarNotificacao(resultado.erro || 'Erro ao criar agendamento', 'error');
                     btnFinalizar.disabled = false;
                     btnFinalizar.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Confirmar Agendamento';
                 }
             } catch (error) {
-                alert('Erro ao criar agendamento. Tente novamente.');
+                mostrarNotificacao('Erro ao criar agendamento. Tente novamente.', 'error');
                 console.error(error);
                 btnFinalizar.disabled = false;
                 btnFinalizar.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Confirmar Agendamento';
@@ -811,6 +1008,237 @@
 
         function novoAgendamento() {
             location.reload();
+        }
+    </script>
+
+    <!-- Modal Cancelar Agendamento -->
+    <div id="modalCancelar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-calendar-times mr-2 text-red-600"></i>Cancelar Agendamento
+                </h3>
+                <button onclick="fecharModalCancelar()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <!-- Buscar Agendamento -->
+            <div id="buscaAgendamento">
+                <p class="text-gray-600 mb-4">Digite seu nome e telefone para buscar seus agendamentos:</p>
+                <div class="space-y-4 mb-4">
+                    <div class="relative">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user mr-2 gold-text"></i>Nome Completo
+                        </label>
+                        <input type="text" id="nomeBusca" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                            placeholder="Digite seu nome"
+                            autocomplete="off"
+                            oninput="buscarClienteCancelamento()">
+                        <!-- Dropdown de sugestões -->
+                        <div id="sugestoesClienteCancelamento" class="hidden absolute z-10 w-full mt-1 bg-white border-2 gold-border rounded-xl shadow-lg max-h-48 overflow-y-auto"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-phone mr-2 gold-text"></i>Telefone
+                        </label>
+                        <input type="tel" id="telefoneBusca" 
+                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                            placeholder="(11) 99999-9999"
+                            autocomplete="tel">
+                    </div>
+                </div>
+                <button onclick="buscarAgendamentos()" 
+                    class="w-full btn-primary text-white font-bold py-3 rounded-xl shadow-lg">
+                    <i class="fas fa-search mr-2"></i>Buscar Agendamentos
+                </button>
+            </div>
+
+            <!-- Lista de Agendamentos -->
+            <div id="listaAgendamentosCancelar" class="hidden">
+                <p class="text-gray-600 mb-4">Selecione o agendamento que deseja cancelar:</p>
+                <div id="agendamentosEncontrados" class="space-y-3 max-h-80 overflow-y-auto mb-4">
+                    <!-- Agendamentos serão inseridos aqui -->
+                </div>
+                <button onclick="voltarBusca()" class="w-full bg-gray-500 text-white font-bold py-3 rounded-xl hover:bg-gray-600 transition">
+                    <i class="fas fa-arrow-left mr-2"></i>Voltar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funções Modal Cancelamento
+        function abrirModalCancelar() {
+            document.getElementById('modalCancelar').classList.remove('hidden');
+            document.getElementById('buscaAgendamento').classList.remove('hidden');
+            document.getElementById('listaAgendamentosCancelar').classList.add('hidden');
+            document.getElementById('nomeBusca').value = '';
+            document.getElementById('telefoneBusca').value = '';
+        }
+
+        function fecharModalCancelar() {
+            document.getElementById('modalCancelar').classList.add('hidden');
+        }
+
+        function voltarBusca() {
+            document.getElementById('buscaAgendamento').classList.remove('hidden');
+            document.getElementById('listaAgendamentosCancelar').classList.add('hidden');
+        }
+
+        // Buscar cliente para autocompletar no cancelamento
+        async function buscarClienteCancelamento() {
+            const nome = document.getElementById('nomeBusca').value.trim();
+            const sugestoesDiv = document.getElementById('sugestoesClienteCancelamento');
+            
+            // Limpar timeout anterior
+            if (timeoutBuscaCancelamento) {
+                clearTimeout(timeoutBuscaCancelamento);
+            }
+            
+            if (nome.length < 3) {
+                sugestoesDiv.classList.add('hidden');
+                sugestoesDiv.innerHTML = '';
+                return;
+            }
+            
+            // Aguardar 300ms após parar de digitar
+            timeoutBuscaCancelamento = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/buscar-cliente?termo=${encodeURIComponent(nome)}`);
+                    const dados = await response.json();
+                    
+                    if (dados.clientes && dados.clientes.length > 0) {
+                        sugestoesDiv.innerHTML = '';
+                        sugestoesDiv.classList.remove('hidden');
+                        
+                        dados.clientes.forEach(cliente => {
+                            const div = document.createElement('div');
+                            div.className = 'px-4 py-3 hover:bg-yellow-50 cursor-pointer border-b last:border-b-0 transition';
+                            div.innerHTML = `
+                                <div class="font-semibold text-gray-800">${cliente.nome_completo}</div>
+                                <div class="text-sm text-gray-600">${formatarTelefone(cliente.telefone)}</div>
+                                <div class="text-xs text-yellow-600 mt-1">
+                                    <i class="fas fa-history"></i> ${cliente.total_agendamentos} agendamento(s)
+                                </div>
+                            `;
+                            div.onclick = () => selecionarClienteCancelamento(cliente);
+                            sugestoesDiv.appendChild(div);
+                        });
+                    } else {
+                        sugestoesDiv.classList.add('hidden');
+                        sugestoesDiv.innerHTML = '';
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar cliente:', error);
+                }
+            }, 300);
+        }
+        
+        function selecionarClienteCancelamento(cliente) {
+            document.getElementById('nomeBusca').value = cliente.nome_completo;
+            document.getElementById('telefoneBusca').value = formatarTelefone(cliente.telefone);
+            document.getElementById('sugestoesClienteCancelamento').classList.add('hidden');
+        }
+
+        async function buscarAgendamentos() {
+            const nome = document.getElementById('nomeBusca').value.trim();
+            const telefone = document.getElementById('telefoneBusca').value.trim();
+            
+            if (!telefone) {
+                mostrarNotificacao('Por favor, digite seu telefone', 'warning');
+                return;
+            }
+
+            try {
+                const telefoneLimpo = telefone.replace(/\D/g, '');
+                let url = `/api/meus-agendamentos?telefone=${telefoneLimpo}`;
+                if (nome) {
+                    url += `&nome=${encodeURIComponent(nome)}`;
+                }
+                
+                const response = await fetch(url);
+                const dados = await response.json();
+
+                if (response.ok && dados.agendamentos && dados.agendamentos.length > 0) {
+                    const container = document.getElementById('agendamentosEncontrados');
+                    container.innerHTML = '';
+
+                    dados.agendamentos.forEach(ag => {
+                        const dataObj = new Date(ag.data_hora);
+                        const dataFormatada = dataObj.toLocaleDateString('pt-BR', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric' 
+                        });
+                        const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+
+                        const statusColor = ag.status === 'confirmado' ? 'bg-green-100 text-green-800' : 
+                                          ag.status === 'cancelado' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800';
+
+                        const div = document.createElement('div');
+                        div.className = 'border-2 border-gray-200 rounded-xl p-4 hover:border-yellow-600 transition';
+                        div.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-bold text-gray-800">${ag.barbeiro.nome}</p>
+                                    <p class="text-sm text-gray-600">${ag.servico.nome}</p>
+                                </div>
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor}">
+                                    ${ag.status === 'confirmado' ? 'Confirmado' : ag.status === 'cancelado' ? 'Cancelado' : ag.status}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                                <span><i class="fas fa-calendar mr-1"></i>${dataFormatada}</span>
+                                <span><i class="fas fa-clock mr-1"></i>${horaFormatada}</span>
+                            </div>
+                            ${ag.status === 'confirmado' ? `
+                                <button onclick="confirmarCancelamento(${ag.id})" 
+                                    class="w-full bg-red-600 text-white font-semibold py-2 rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-times-circle mr-2"></i>Cancelar este agendamento
+                                </button>
+                            ` : '<p class="text-center text-gray-500 text-sm">Este agendamento não pode ser cancelado</p>'}
+                        `;
+                        container.appendChild(div);
+                    });
+
+                    document.getElementById('buscaAgendamento').classList.add('hidden');
+                    document.getElementById('listaAgendamentosCancelar').classList.remove('hidden');
+                } else {
+                    mostrarNotificacao('Nenhum agendamento encontrado. Verifique os dados e tente novamente.', 'warning');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar agendamentos:', error);
+                mostrarNotificacao('Erro ao buscar agendamentos. Tente novamente.', 'error');
+            }
+        }
+
+        async function confirmarCancelamento(agendamentoId) {
+            if (!confirm('Tem certeza que deseja cancelar este agendamento?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/cancelar-agendamento/${agendamentoId}`, {
+                    method: 'PUT'
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    mostrarNotificacao('Agendamento cancelado com sucesso!', 'success');
+                    fecharModalCancelar();
+                } else {
+                    mostrarNotificacao(resultado.erro || 'Erro ao cancelar agendamento', 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao cancelar:', error);
+                mostrarNotificacao('Erro ao cancelar agendamento. Tente novamente.', 'error');
+            }
         }
     </script>
 </body>

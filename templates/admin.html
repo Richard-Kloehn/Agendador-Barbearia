@@ -6,9 +6,60 @@
     <title>Painel Admin - Barbearia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         * { font-family: 'Inter', sans-serif; }
+        
+        .toast {
+            animation: slideIn 0.3s ease-out;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .toast-exit {
+            animation: slideOut 0.3s ease-in;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
         
         .sidebar-item {
             transition: all 0.3s ease;
@@ -44,246 +95,817 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        /* Responsividade Desktop */
+        @media (min-width: 769px) {
+            main {
+                height: calc(100vh - 60px);
+                overflow-y: auto;
+                margin-top: 60px;
+            }
+            
+            header {
+                position: fixed;
+                top: 0;
+                right: 0;
+                left: 256px;
+                z-index: 30;
+                height: 60px;
+            }
+        }
+        
+        /* Responsividade Mobile */
+        @media (max-width: 768px) {
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .sidebar-mobile {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                overflow-y: auto;
+            }
+            
+            .sidebar-mobile.open {
+                transform: translateX(0);
+            }
+            
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+                pointer-events: none;
+            }
+            
+            .mobile-overlay.active {
+                display: block;
+                pointer-events: auto;
+            }
+            
+            /* Garantir scroll suave no mobile */
+            body {
+                -webkit-overflow-scrolling: touch;
+                overflow: hidden;
+            }
+            
+            main {
+                height: 100vh;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                padding-top: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
-    <div class="flex h-screen overflow-hidden">
+    <!-- Container de Notificações Toast -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Overlay para mobile -->
+    <div id="mobileOverlay" class="mobile-overlay" onclick="toggleMobileMenu()"></div>
+    
+    <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white shadow-lg hidden md:block">
+        <aside id="sidebar" class="w-64 bg-white shadow-lg fixed md:relative h-full z-50 sidebar-mobile md:translate-x-0 overflow-y-auto">
             <div class="p-6 bg-gradient-to-r from-gray-900 to-gray-800">
+                <!-- Botão fechar para mobile -->
+                <button onclick="toggleMobileMenu()" class="md:hidden absolute top-4 right-4 text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
                 <h1 class="text-white text-2xl font-bold">
-                    <i class="fas fa-cut mr-2" style="color: #daa520;"></i>Admin
+                    <i class="fas fa-cut mr-2" style="color: #daa520;"></i><span id="nomeBarbeariaSidebar"></span>
                 </h1>
                 <p class="text-yellow-200 text-sm">Painel de Controle</p>
             </div>
             
             <nav class="mt-6">
-                <div class="sidebar-item active px-6 py-3" onclick="mostrarSecao('dashboard')">
-                    <i class="fas fa-chart-line w-5 mr-3"></i>Dashboard
-                </div>
-                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('agendamentos')">
+                <div class="sidebar-item active px-6 py-3" onclick="mostrarSecao('agendamentos'); closeMobileMenu()">
                     <i class="fas fa-calendar-alt w-5 mr-3"></i>Agendamentos
                 </div>
-                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('barbeiros')">
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('barbeiros'); closeMobileMenu()">
                     <i class="fas fa-cut w-5 mr-3"></i>Barbeiros
                 </div>
-                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('servicos')">
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('servicos'); closeMobileMenu()">
                     <i class="fas fa-scissors w-5 mr-3"></i>Serviços
                 </div>
-                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('configuracoes')">
-                    <i class="fas fa-cog w-5 mr-3"></i>Configurações
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('configuracoes'); closeMobileMenu()">
+                    <i class="fas fa-clock w-5 mr-3"></i>Horários
+                </div>
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('dashboard'); closeMobileMenu()">
+                    <i class="fas fa-chart-line w-5 mr-3"></i>Dashboard
                 </div>
                 <div class="sidebar-item px-6 py-3" onclick="window.location.href='/'">
-                    <i class="fas fa-home w-5 mr-3"></i>Site Principal
-                </div>
-                <div class="sidebar-item px-6 py-3 text-red-600" onclick="window.location.href='/admin-logout'">
-                    <i class="fas fa-sign-out-alt w-5 mr-3"></i>Sair
+                    <i class="fas fa-home w-5 mr-3"></i>Site Cliente
                 </div>
             </nav>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="flex-1 overflow-y-auto overflow-x-hidden">
             <!-- Header -->
-            <header class="bg-white shadow-sm">
-                <div class="px-6 py-4 flex items-center justify-between">
-                    <h2 class="text-2xl font-bold text-gray-800" id="tituloSecao">Dashboard</h2>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-gray-600" id="dataHoje"></span>
-                        <button onclick="atualizarDados()" class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-4 py-2 rounded-lg hover:shadow-lg transition">
-                            <i class="fas fa-sync-alt mr-2"></i>Atualizar
-                        </button>
+            <header class="bg-white shadow-sm z-30">
+                <div class="px-4 md:px-6 py-4 flex items-center justify-between">
+                    <!-- Botão menu mobile -->
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-800 mr-3">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                    <h2 class="text-lg md:text-2xl font-bold text-gray-800" id="tituloSecao">Gerenciar Agendamentos</h2>
+                    <div class="flex items-center space-x-2 md:space-x-4">
+                        <span class="text-xs md:text-sm text-gray-600" id="dataHoje"></span>
                     </div>
                 </div>
             </header>
 
-            <div class="p-6">
-                <!-- Dashboard Section -->
-                <section id="secao-dashboard" class="secao">
-                    <!-- Estatísticas -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="stat-card">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-500 text-sm font-semibold">Total de Agendamentos</p>
-                                    <p class="text-3xl font-bold text-gray-800 mt-2" id="statTotal">0</p>
-                                </div>
-                                <i class="fas fa-calendar-check text-4xl" style="color: #daa520;"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-500 text-sm font-semibold">Hoje</p>
-                                    <p class="text-3xl font-bold text-gray-800 mt-2" id="statHoje">0</p>
-                                </div>
-                                <i class="fas fa-clock text-4xl text-blue-600"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-500 text-sm font-semibold">Confirmados</p>
-                                    <p class="text-3xl font-bold text-gray-800 mt-2" id="statConfirmados">0</p>
-                                </div>
-                                <i class="fas fa-check-circle text-4xl text-green-600"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-500 text-sm font-semibold">Pendentes</p>
-                                    <p class="text-3xl font-bold text-gray-800 mt-2" id="statPendentes">0</p>
-                                </div>
-                                <i class="fas fa-hourglass-half text-4xl text-yellow-600"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Próximos Agendamentos -->
-                    <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
-                            <i class="fas fa-calendar-day mr-2" style="color: #daa520;"></i>Agendamentos de Hoje
-                        </h3>
-                        <div id="agendamentosHoje" class="space-y-3"></div>
-                    </div>
-                </section>
-
+            <div class="p-3 md:p-6 pb-24 md:pb-6">
                 <!-- Agendamentos Section -->
-                <section id="secao-agendamentos" class="secao hidden">
-                    <div class="bg-white rounded-xl shadow-lg p-6">
+                <section id="secao-agendamentos" class="secao">
+                    <div class="bg-white rounded-xl shadow-lg p-4">
+                        <!-- Última Atualização no topo direito -->
+                        <div class="flex justify-end mb-1">
+                            <p class="text-xs text-gray-500">
+                                <i class="fas fa-sync-alt mr-1"></i>Última atualização: <span class="font-bold text-gray-700" id="ultimaAtualizacao">--:--</span>
+                            </p>
+                        </div>
+                        
                         <!-- Filtros -->
-                        <div class="mb-6 flex flex-wrap gap-4">
+                        <div class="mb-3 grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Data</label>
-                                <input type="date" id="filtroData" onchange="carregarAgendamentos()"
-                                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-user-tie mr-1" style="color: #daa520;"></i>Barbeiro
+                                </label>
+                                <select id="filtroBarbeiro" onchange="carregarAgendamentos()"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition">
+                                    <option value="">Todos os Barbeiros</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-calendar mr-1" style="color: #daa520;"></i>Data
+                                </label>
+                                <input type="date" id="filtroData" onchange="carregarAgendamentos()"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition"
+                                    style="max-width: 100%;">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-filter mr-1" style="color: #daa520;"></i>Status
+                                </label>
                                 <select id="filtroStatus" onchange="carregarAgendamentos()"
-                                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600">
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition">
                                     <option value="">Todos</option>
-                                    <option value="pendente">Pendente</option>
                                     <option value="confirmado">Confirmado</option>
                                     <option value="cancelado">Cancelado</option>
                                     <option value="concluido">Concluído</option>
                                 </select>
                             </div>
-                            <div class="flex items-end">
-                                <button onclick="limparFiltros()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                                    Limpar Filtros
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2 md:opacity-0 md:pointer-events-none">&nbsp;</label>
+                                <button onclick="limparFiltros()" class="w-full px-6 py-2.5 text-sm bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                                    <i class="fas fa-redo mr-2"></i>Limpar
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Contador de Resultados -->
+                        <div class="mb-4">
+                            <!-- Card Total de Agendamentos -->
+                            <div class="bg-white rounded-lg shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow inline-flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                                    <i class="fas fa-calendar-check text-white text-lg"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total de Agendamentos<span id="textoStatusFiltro"></span></p>
+                                    <p class="text-2xl font-bold text-gray-800" id="contadorAgendamentos">0</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Tabela de Agendamentos -->
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto rounded-xl border border-gray-200 hidden md:block">
                             <table class="w-full">
-                                <thead class="bg-gray-50">
+                                <thead class="bg-gradient-to-r from-gray-800 to-gray-900 text-white">
                                     <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefone</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Data/Hora</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
+                                        <th class="px-4 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-clock mr-2"></i>Horário
+                                        </th>
+                                        <th class="px-4 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-calendar mr-2"></i>Data
+                                        </th>
+                                        <th class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-user mr-2"></i>Cliente
+                                        </th>
+                                        <th class="px-4 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-cut mr-2"></i>Barbeiro
+                                        </th>
+                                        <th class="px-4 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-scissors mr-2"></i>Serviço
+                                        </th>
+                                        <th class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-hourglass-half mr-2"></i>Duração
+                                        </th>
+                                        <th class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-info-circle mr-2"></i>Status
+                                        </th>
+                                        <th class="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                                            <i class="fas fa-cog mr-2"></i>Ações
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody id="tabelaAgendamentos">
+                                <tbody id="tabelaAgendamentos" class="bg-white divide-y divide-gray-200">
                                     <!-- Preenchido dinamicamente -->
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Cards Mobile para Agendamentos -->
+                        <div id="cardsAgendamentos" class="md:hidden space-y-3">
+                            <!-- Preenchido dinamicamente -->
+                        </div>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Dashboard Section -->
+                <section id="secao-dashboard" class="secao hidden">
+                    <div class="space-y-3 pb-24 md:pb-0 px-3 md:px-6">
+                        <!-- Filtros do Dashboard -->
+                        <div class="bg-white rounded-xl shadow-lg p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-user-tie mr-1" style="color: #daa520;"></i>Barbeiro
+                                    </label>
+                                    <select id="dashFiltroBarbeiro" onchange="carregarDashboard()"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition">
+                                        <option value="">Todos os Barbeiros</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-calendar mr-1" style="color: #daa520;"></i>Data Início
+                                    </label>
+                                    <input type="date" id="dashDataInicio" onchange="carregarDashboard()"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i class="fas fa-calendar mr-1" style="color: #daa520;"></i>Data Fim
+                                    </label>
+                                    <input type="date" id="dashDataFim" onchange="carregarDashboard()"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2 md:opacity-0 md:pointer-events-none">&nbsp;</label>
+                                    <button onclick="limparFiltrosDashboard()" class="w-full px-6 py-2.5 text-sm bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                                        <i class="fas fa-redo mr-2"></i>Limpar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cards de Estatísticas Principais -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Total de Atendimentos Concluídos -->
+                            <div class="relative bg-gradient-to-br from-green-500 via-green-600 to-green-700 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden">
+                                <div class="absolute top-0 right-0 w-24 h-24 bg-white opacity-10 rounded-full -mr-12 -mt-12"></div>
+                                <div class="absolute bottom-0 left-0 w-20 h-20 bg-white opacity-10 rounded-full -ml-10 -mb-10"></div>
+                                <div class="relative">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg">
+                                            <i class="fas fa-chart-line text-xl md:text-2xl"></i>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs uppercase font-bold tracking-wider opacity-90 mb-1">Total de Atendimentos</p>
+                                    <p class="text-2xl md:text-3xl font-black mb-1" id="dashTotalAtendimentos">0</p>
+                                    <p class="text-xs opacity-75">Concluídos no período</p>
+                                </div>
+                            </div>
+
+                            <!-- Atendimentos Cancelados -->
+                            <div class="relative bg-gradient-to-br from-red-500 via-red-600 to-red-700 rounded-xl shadow-lg p-4 md:p-5 text-white hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden">
+                                <div class="absolute top-0 right-0 w-24 h-24 bg-white opacity-10 rounded-full -mr-12 -mt-12"></div>
+                                <div class="absolute bottom-0 left-0 w-20 h-20 bg-white opacity-10 rounded-full -ml-10 -mb-10"></div>
+                                <div class="relative">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-25 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg">
+                                            <i class="fas fa-times-circle text-xl md:text-2xl"></i>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs uppercase font-bold tracking-wider opacity-90 mb-1">Cancelados</p>
+                                    <p class="text-2xl md:text-3xl font-black mb-1" id="dashCancelados">0</p>
+                                    <p class="text-xs opacity-75">Atendimentos cancelados</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gráficos -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Gráfico de Atendimentos por Barbeiro -->
+                            <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
+                                <h3 class="text-base md:text-lg font-bold text-gray-800 mb-4 flex flex-col sm:flex-row sm:items-center">
+                                    <span class="flex items-center">
+                                        <i class="fas fa-chart-bar mr-2 text-green-600"></i>
+                                        Atendimentos por Barbeiro
+                                    </span>
+                                    <span class="text-xs text-gray-500 font-normal mt-1 sm:mt-0 sm:ml-2">(Clique nas barras para detalhes)</span>
+                                </h3>
+                                <div class="chart-container" style="cursor: pointer;">
+                                    <canvas id="chartAtendimentosBarbeiro"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Tabela de Serviços Mais Realizados -->
+                            <div class="bg-white rounded-xl shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                    <i class="fas fa-cut mr-2 text-purple-600"></i>
+                                    Serviços Mais Realizados
+                                </h3>
+                                <!-- Tabela Desktop -->
+                                <div class="overflow-x-auto hidden md:block">
+                                    <table class="w-full">
+                                        <thead class="bg-gradient-to-r from-purple-50 to-purple-100">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Serviço</th>
+                                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Valor</th>
+                                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Total</th>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Top Barbeiro</th>
+                                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Qtd</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaServicos" class="divide-y divide-gray-200">
+                                            <!-- Preenchido dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- Cards Mobile -->
+                                <div id="cardsServicos" class="md:hidden space-y-3">
+                                    <!-- Preenchido dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabelas Detalhadas -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Dias Trabalhados por Barbeiro -->
+                            <div class="bg-white rounded-xl shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                    <i class="fas fa-calendar-day mr-2 text-green-600"></i>
+                                    Dias Trabalhados por Barbeiro
+                                </h3>
+                                <!-- Tabela Desktop -->
+                                <div class="overflow-x-auto hidden md:block">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Barbeiro</th>
+                                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Dias Trabalhados</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaDiasTrabalhados" class="divide-y divide-gray-200">
+                                            <!-- Preenchido dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- Cards Mobile -->
+                                <div id="cardsDiasTrabalhados" class="md:hidden space-y-3">
+                                    <!-- Preenchido dinamicamente -->
+                                </div>
+                            </div>
+
+                            <!-- Top Barbeiros -->
+                            <div class="bg-white rounded-xl shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                    <i class="fas fa-trophy mr-2 text-yellow-600"></i>
+                                    Ranking de Barbeiros
+                                </h3>
+                                <div class="space-y-3" id="rankingBarbeiros">
+                                    <!-- Preenchido dinamicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal de Detalhes do Barbeiro -->
+                        <div id="modalDetalhesBarbeiro" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                            <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                <div class="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-t-2xl">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h3 class="text-2xl font-bold" id="modalBarbeiroNome">Barbeiro</h3>
+                                            <p class="text-green-100 text-sm mt-1">Detalhes do período</p>
+                                        </div>
+                                        <button onclick="fecharModalDetalhesBarbeiro()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full w-10 h-10 flex items-center justify-center transition">
+                                            <i class="fas fa-times text-xl"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-6 space-y-6">
+                                    <!-- Estatísticas Rápidas -->
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <div class="bg-blue-50 rounded-xl p-4 text-center">
+                                            <i class="fas fa-calendar-check text-2xl text-blue-600 mb-2"></i>
+                                            <p class="text-2xl font-bold text-gray-800" id="modalDiasTrabalhados">0</p>
+                                            <p class="text-xs text-gray-600 mt-1">Dias Trabalhados</p>
+                                        </div>
+                                        <div class="bg-green-50 rounded-xl p-4 text-center">
+                                            <i class="fas fa-check-circle text-2xl text-green-600 mb-2"></i>
+                                            <p class="text-2xl font-bold text-gray-800" id="modalTotalAtendimentos">0</p>
+                                            <p class="text-xs text-gray-600 mt-1">Total de Atendimentos</p>
+                                        </div>
+                                        <div class="bg-purple-50 rounded-xl p-4 text-center">
+                                            <i class="fas fa-cut text-2xl text-purple-600 mb-2"></i>
+                                            <p class="text-2xl font-bold text-gray-800" id="modalTotalServicos">0</p>
+                                            <p class="text-xs text-gray-600 mt-1">Tipos de Serviços</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tabela de Serviços -->
+                                    <div>
+                                        <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                                            <i class="fas fa-scissors mr-2 text-green-600"></i>
+                                            Serviços Realizados
+                                        </h4>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full">
+                                                <thead class="bg-gradient-to-r from-green-50 to-green-100">
+                                                    <tr>
+                                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Serviço</th>
+                                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Quantidade</th>
+                                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">% do Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="modalTabelaServicos" class="divide-y divide-gray-200">
+                                                    <!-- Preenchido dinamicamente -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- Barbeiros Section -->
                 <section id="secao-barbeiros" class="secao hidden">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-bold text-gray-800">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 px-3 md:px-6">
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">
                             <i class="fas fa-cut mr-2" style="color: #daa520;"></i>Gerenciar Barbeiros
                         </h3>
-                        <button onclick="abrirModalBarbeiro()" class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
+                        <button onclick="abrirModalBarbeiro()" class="w-full sm:w-auto bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
                             <i class="fas fa-plus mr-2"></i>Novo Barbeiro
                         </button>
                     </div>
 
                     <!-- Lista de Barbeiros -->
-                    <div id="listaBarbeiros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div id="listaBarbeiros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
                         <!-- Barbeiros serão inseridos aqui -->
                     </div>
                 </section>
 
                 <!-- Serviços Section -->
                 <section id="secao-servicos" class="secao hidden">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-bold text-gray-800">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 px-3 md:px-6">
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">
                             <i class="fas fa-scissors mr-2" style="color: #daa520;"></i>Gerenciar Serviços
                         </h3>
-                        <button onclick="abrirModalServico()" class="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
+                        <button onclick="abrirModalServico()" class="w-full sm:w-auto bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
                             <i class="fas fa-plus mr-2"></i>Novo Serviço
                         </button>
                     </div>
 
                     <!-- Lista de Serviços -->
-                    <div id="listaServicos" class="space-y-4">
+                    <div id="listaServicos" class="space-y-4 pb-24 md:pb-0">
                         <!-- Serviços serão inseridos aqui -->
                     </div>
                 </section>
 
                 <!-- Configurações Section -->
                 <section id="secao-configuracoes" class="secao hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Configurações da Barbearia -->
+                    <div class="px-3 md:px-6">
+                        <!-- Botões de Ação -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                        <button onclick="abrirModalHorarioEspecial()" 
+                            class="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-3 px-4 rounded-lg hover:shadow-lg transition transform hover:-translate-y-1">
+                            <i class="fas fa-calendar-star text-xl mb-1"></i>
+                            <p class="text-sm">✨ Horários Especiais</p>
+                        </button>
+                        
+                        <button onclick="abrirModalDiaFechado()" 
+                            class="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-4 rounded-lg hover:shadow-lg transition transform hover:-translate-y-1">
+                            <i class="fas fa-door-closed text-xl mb-1"></i>
+                            <p class="text-sm">Dias Fechados</p>
+                        </button>
+                    </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 pb-24 md:pb-0">
+                        <!-- Horários dos Barbeiros Cadastrados -->
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h3 class="text-xl font-bold text-gray-800 mb-6">Configurações da Barbearia</h3>
-                            
-                            <form id="formConfig" class="space-y-6">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nome da Barbearia</label>
-                                    <input type="text" id="configNome" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Horário Abertura</label>
-                                        <input type="time" id="configAbertura" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Horário Fechamento</label>
-                                        <input type="time" id="configFechamento" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    </div>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Almoço Início</label>
-                                        <input type="time" id="configAlmocoInicio" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Almoço Fim</label>
-                                        <input type="time" id="configAlmocoFim" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    </div>
-                                </div>
-                                
-                                <button type="button" onclick="salvarConfiguracao()" 
-                                    class="w-full bg-gradient-to-r from-yellow-600 to-yellow-700 text-white font-bold py-3 rounded-lg hover:shadow-lg transition">
-                                    <i class="fas fa-save mr-2"></i>Salvar Configurações
-                                </button>
-                            </form>
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">
+                                <i class="fas fa-user-clock mr-2 text-blue-600"></i>
+                                Horários dos Barbeiros
+                            </h3>
+                            <div id="listaHorariosBarbeiros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <!-- Cards de horários serão inseridos aqui -->
+                            </div>
                         </div>
                         
-                        <!-- Horários Especiais -->
+                        <!-- Horários Especiais Cadastrados -->
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h3 class="text-xl font-bold text-gray-800 mb-4">Horários Especiais</h3>
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">
+                                <i class="fas fa-calendar-star mr-2 text-purple-600"></i>
+                                Horários Especiais
+                            </h3>
+                            <div id="listaHorariosEspeciais" class="space-y-3">
+                                <!-- Horários especiais serão listados aqui -->
+                            </div>
+                        </div>
+                        
+                        <!-- Dias Fechados -->
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">
+                                <i class="fas fa-door-closed mr-2 text-red-600"></i>
+                                Dias Fechados
+                            </h3>
+                            <div id="listaDiasFechados" class="space-y-3">
+                                <!-- Dias fechados serão listados aqui -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal Horário Barbeiro -->
+                    <div id="modalHorarioBarbeiro" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-2xl font-bold">
+                                        <i class="fas fa-user-clock mr-2"></i>
+                                        Configurar Horários de Atendimento
+                                    </h3>
+                                    <button onclick="fecharModalHorarioBarbeiro()" class="text-white hover:text-gray-200">
+                                        <i class="fas fa-times text-2xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-gray-800 mb-6">Horários de Atendimento dos Barbeiros</h3>
+                            
+                            <!-- Seletor de Barbeiro -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Selecionar Barbeiro</label>
+                                <select id="selectBarbeiroHorario" onchange="carregarHorariosBarbeiro()" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">Selecione um barbeiro</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Formulário de Horários -->
+                            <div id="formHorariosBarbeiro" class="hidden">
+                                <h4 class="font-semibold text-gray-700 mb-4">Dias e Horários de Trabalho</h4>
+                                
+                                <!-- Dias da Semana -->
+                                <div class="space-y-4 mb-6" id="diasSemana">
+                                    <!-- Domingo -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_0" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(0)">
+                                                <span class="font-semibold text-gray-700">Domingo</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_0" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_0" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_0" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_0" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_0" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Segunda -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_1" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(1)">
+                                                <span class="font-semibold text-gray-700">Segunda-feira</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_1" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Terça -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_2" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(2)">
+                                                <span class="font-semibold text-gray-700">Terça-feira</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_2" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_2" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_2" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_2" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_2" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quarta -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_3" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(3)">
+                                                <span class="font-semibold text-gray-700">Quarta-feira</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_3" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_3" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_3" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_3" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_3" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quinta -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_4" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(4)">
+                                                <span class="font-semibold text-gray-700">Quinta-feira</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_4" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_4" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_4" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_4" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_4" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Sexta -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_5" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(5)">
+                                                <span class="font-semibold text-gray-700">Sexta-feira</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_5" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_5" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_5" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_5" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_5" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Sábado -->
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <label class="flex items-center">
+                                                <input type="checkbox" id="dia_6" class="w-4 h-4 text-yellow-600 rounded mr-2" onchange="toggleDiaHorario(6)">
+                                                <span class="font-semibold text-gray-700">Sábado</span>
+                                            </label>
+                                        </div>
+                                        <div id="horario_6" class="hidden grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Início</label>
+                                                <input type="time" id="inicio_6" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Fim</label>
+                                                <input type="time" id="fim_6" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Início</label>
+                                                <input type="time" id="almoco_inicio_6" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-600 mb-1">Almoço Fim</label>
+                                                <input type="time" id="almoco_fim_6" class="w-full px-3 py-2 border rounded-lg text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="button" onclick="salvarHorariosBarbeiro()" 
+                                    class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-3 rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-save mr-2"></i>Salvar Horários
+                                </button>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal Horário Especial -->
+                    <div id="modalHorarioEspecial" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+                            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-2xl">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-2xl font-bold">
+                                        <i class="fas fa-calendar-star mr-2"></i>
+                                        Adicionar Horário Especial
+                                    </h3>
+                                    <button onclick="fecharModalHorarioEspecial()" class="text-white hover:text-gray-200">
+                                        <i class="fas fa-times text-2xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-6">
                             <p class="text-gray-600 text-sm mb-4">Configure horários diferenciados para datas específicas (feriados, eventos, etc)</p>
                             
-                            <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                                <h4 class="font-semibold text-gray-700 mb-3">Adicionar Horário Especial</h4>
-                                <div class="space-y-3">
+                            <div class="space-y-4">
+                                <div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Barbeiro</label>
+                                        <select id="horarioEspecialBarbeiro" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                            <option value="">Todos os Barbeiros</option>
+                                        </select>
+                                    </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Data</label>
                                         <input type="date" id="horarioEspecialData" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
@@ -314,13 +936,46 @@
                                     </div>
                                 </div>
                                 <button type="button" onclick="adicionarHorarioEspecial()" 
-                                    class="mt-4 w-full bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition">
-                                    <i class="fas fa-plus mr-2"></i>Adicionar
+                                    class="mt-4 w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-3 rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-plus mr-2"></i>Adicionar Horário Especial
                                 </button>
                             </div>
-                            
-                            <div id="listaHorariosEspeciais" class="space-y-3 max-h-96 overflow-y-auto">
-                                <!-- Horários especiais serão listados aqui -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal Dia Fechado -->
+                    <div id="modalDiaFechado" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+                            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-2xl">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-2xl font-bold">
+                                        <i class="fas fa-door-closed mr-2"></i>
+                                        Marcar Dia Fechado
+                                    </h3>
+                                    <button onclick="fecharModalDiaFechado()" class="text-white hover:text-gray-200">
+                                        <i class="fas fa-times text-2xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <p class="text-gray-600 text-sm mb-4">Nenhum barbeiro estará disponível nesta data</p>
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Data</label>
+                                        <input type="date" id="diaFechadoData" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Motivo</label>
+                                        <input type="text" id="diaFechadoMotivo" placeholder="Ex: Feriado, Manutenção" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                                    </div>
+                                </div>
+                                
+                                <button type="button" onclick="adicionarDiaFechado()" 
+                                    class="mt-6 w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-ban mr-2"></i>Marcar como Fechado
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -330,9 +985,86 @@
     </div>
 
     <script>
+        // ========== SISTEMA DE NOTIFICAÇÕES TOAST ==========
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const icons = {
+                success: '<i class="fas fa-check-circle text-xl"></i>',
+                error: '<i class="fas fa-exclamation-circle text-xl"></i>',
+                warning: '<i class="fas fa-exclamation-triangle text-xl"></i>',
+                info: '<i class="fas fa-info-circle text-xl"></i>'
+            };
+            
+            const colors = {
+                success: 'bg-gradient-to-r from-green-500 to-green-600 text-white',
+                error: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
+                warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white',
+                info: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+            };
+            
+            toast.className = `toast ${colors[type]} shadow-2xl rounded-xl p-4 flex items-center space-x-3`;
+            toast.innerHTML = `
+                ${icons[type]}
+                <span class="flex-1 font-semibold">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remover após 5 segundos
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+        
+        // ========== SISTEMA DE NOTIFICAÇÕES TOAST ==========
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const icons = {
+                success: '<i class="fas fa-check-circle text-xl"></i>',
+                error: '<i class="fas fa-exclamation-circle text-xl"></i>',
+                warning: '<i class="fas fa-exclamation-triangle text-xl"></i>',
+                info: '<i class="fas fa-info-circle text-xl"></i>'
+            };
+            
+            const colors = {
+                success: 'bg-gradient-to-r from-green-500 to-green-600 text-white',
+                error: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
+                warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white',
+                info: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+            };
+            
+            toast.className = `toast ${colors[type]} shadow-2xl rounded-xl p-4 flex items-center space-x-3`;
+            toast.innerHTML = `
+                ${icons[type]}
+                <span class="flex-1 font-semibold">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remover após 5 segundos
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+        
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
             const hoje = new Date();
+            const hojeFmt = hoje.toISOString().split('T')[0];
+            
+            // Configurar data de hoje
             document.getElementById('dataHoje').textContent = hoje.toLocaleDateString('pt-BR', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -340,10 +1072,41 @@
                 day: 'numeric' 
             });
             
-            atualizarDados();
+            // Definir data de hoje no filtro de agendamentos
+            document.getElementById('filtroData').value = hojeFmt;
+            document.getElementById('filtroStatus').value = 'confirmado';
+            
+            carregarNomeBarbearia();
+            carregarListaBarbeirosAgendamentos();
+            carregarAgendamentos();
             carregarHorariosEspeciais();
+            carregarListaBarbeirosEstatisticas();
+            carregarEstatisticasBarbeiros();
+            
+            // Atualizar agendamentos automaticamente a cada 60 segundos
+            setInterval(() => {
+                const secaoAtual = document.querySelector('.secao:not(.hidden)');
+                if (secaoAtual && secaoAtual.id === 'secao-agendamentos') {
+                    carregarAgendamentos();
+                }
+            }, 60000); // 60 segundos
         });
 
+        // Funções para menu mobile
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+        
         function mostrarSecao(secao) {
             // Atualizar sidebar
             document.querySelectorAll('.sidebar-item').forEach(item => {
@@ -357,16 +1120,20 @@
             
             // Atualizar título
             const titulos = {
-                'dashboard': 'Dashboard',
                 'agendamentos': 'Gerenciar Agendamentos',
                 'barbeiros': 'Gerenciar Barbeiros',
                 'servicos': 'Gerenciar Serviços',
-                'configuracoes': 'Configurações'
+                'configuracoes': 'Horários',
+                'dashboard': 'Dashboard'
             };
             document.getElementById('tituloSecao').textContent = titulos[secao];
             
             // Carregar dados da seção
             if (secao === 'agendamentos') {
+                const hoje = new Date().toISOString().split('T')[0];
+                document.getElementById('filtroData').value = hoje;
+                document.getElementById('filtroStatus').value = 'confirmado';
+                carregarListaBarbeirosAgendamentos();
                 carregarAgendamentos();
             } else if (secao === 'barbeiros') {
                 carregarBarbeiros();
@@ -374,6 +1141,9 @@
                 carregarServicos();
             } else if (secao === 'configuracoes') {
                 carregarConfiguracao();
+            } else if (secao === 'dashboard') {
+                carregarListaBarbeirosDashboard();
+                carregarDashboard();
             }
         }
 
@@ -406,13 +1176,13 @@
                 container.innerHTML = '';
                 
                 if (dados.agendamentos && dados.agendamentos.length > 0) {
-                    dados.agendamentos.forEach(ag => {
+                    dados.agendamentos.slice(0, 5).forEach(ag => {
                         const div = document.createElement('div');
                         div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
                         div.innerHTML = `
                             <div>
                                 <p class="font-semibold text-gray-800">${ag.nome_cliente}</p>
-                                <p class="text-sm text-gray-600">${new Date(ag.data_hora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                <p class="text-sm text-gray-600">${new Date(ag.data_hora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${ag.barbeiro ? ag.barbeiro.nome : 'N/A'}</p>
                             </div>
                             <span class="status-badge ${getStatusColor(ag.status)}">${getStatusLabel(ag.status)}</span>
                         `;
@@ -426,11 +1196,63 @@
             }
         }
 
+        async function carregarAgendamentosDashboard() {
+            const barbeiroId = document.getElementById('filtroBarbeiroDashboard')?.value || '';
+            const hoje = new Date().toISOString().split('T')[0];
+            
+            let url = `/admin/agendamentos?data=${hoje}`;
+            if (barbeiroId) url += `&barbeiro_id=${barbeiroId}`;
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const container = document.getElementById('agendamentosDashboard');
+                container.innerHTML = '';
+                
+                if (dados.agendamentos && dados.agendamentos.length > 0) {
+                    dados.agendamentos.forEach(ag => {
+                        const dataObj = new Date(ag.data_hora);
+                        const horaFormatada = dataObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                        
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition';
+                        div.innerHTML = `
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800 text-lg">${ag.nome_cliente}</p>
+                                <div class="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                    <span><i class="fas fa-user-tie mr-1" style="color: #daa520;"></i>${ag.barbeiro ? ag.barbeiro.nome : 'N/A'}</span>
+                                    <span><i class="fas fa-phone mr-1" style="color: #daa520;"></i>${formatarTelefone(ag.telefone)}</span>
+                                    <span><i class="fas fa-clock mr-1" style="color: #daa520;"></i>${horaFormatada}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="status-badge ${getStatusColor(ag.status)}">${getStatusLabel(ag.status)}</span>
+                                <select onchange="alterarStatusDashboard(${ag.id}, this.value)" class="text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-600">
+                                    <option value="">Alterar...</option>
+                                    <option value="confirmado">Confirmar</option>
+                                    <option value="concluido">Concluir</option>
+                                    <option value="cancelado">Cancelar</option>
+                                </select>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum agendamento para hoje</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar agendamentos:', error);
+            }
+        }
+
         async function carregarAgendamentos() {
+            const barbeiroId = document.getElementById('filtroBarbeiro').value;
             const data = document.getElementById('filtroData').value;
             const status = document.getElementById('filtroStatus').value;
             
             let url = '/admin/agendamentos?';
+            if (barbeiroId) url += `barbeiro_id=${barbeiroId}&`;
             if (data) url += `data=${data}&`;
             if (status) url += `status=${status}`;
             
@@ -438,36 +1260,310 @@
                 const response = await fetch(url);
                 const dados = await response.json();
                 
-                const tbody = document.getElementById('tabelaAgendamentos');
-                tbody.innerHTML = '';
+                const tabela = document.getElementById('tabelaAgendamentos');
+                tabela.innerHTML = '';
+                
+                // Container mobile
+                const cardsMobile = document.getElementById('cardsAgendamentos');
+                cardsMobile.innerHTML = '';
+                
+                // Atualizar contador e hora
+                const contador = document.getElementById('contadorAgendamentos');
+                const totalAgendamentos = dados.agendamentos ? dados.agendamentos.length : 0;
+                contador.textContent = totalAgendamentos;
+                
+                // Atualizar texto do status no card
+                const textoStatus = document.getElementById('textoStatusFiltro');
+                const statusLabels = {
+                    'confirmado': ' Confirmados',
+                    'cancelado': ' Cancelados',
+                    'concluido': ' Concluídos'
+                };
+                textoStatus.textContent = status ? statusLabels[status] || '' : '';
+                
+                const agora = new Date();
+                document.getElementById('ultimaAtualizacao').textContent = 
+                    agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
                 
                 if (dados.agendamentos && dados.agendamentos.length > 0) {
-                    dados.agendamentos.forEach(ag => {
-                        const tr = document.createElement('tr');
-                        tr.className = 'border-b hover:bg-gray-50';
-                        tr.innerHTML = `
-                            <td class="px-4 py-3">${ag.nome_cliente}</td>
-                            <td class="px-4 py-3">${formatarTelefone(ag.telefone)}</td>
-                            <td class="px-4 py-3">${formatarDataHora(ag.data_hora)}</td>
-                            <td class="px-4 py-3">
-                                <span class="status-badge ${getStatusColor(ag.status)}">${getStatusLabel(ag.status)}</span>
+                    // Ordenar por horário (menor para maior)
+                    dados.agendamentos.sort((a, b) => {
+                        return new Date(a.data_hora) - new Date(b.data_hora);
+                    });
+                    
+                    dados.agendamentos.forEach((ag, index) => {
+                        const dataObj = new Date(ag.data_hora);
+                        const dia = dataObj.getDate().toString().padStart(2, '0');
+                        const mes = dataObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+                        const ano = dataObj.getFullYear().toString().slice(-2);
+                        const dataFormatada = `${dia}/${mes}/${ano}`;
+                        const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        
+                        const statusColors = {
+                            'confirmado': 'bg-green-100 text-green-800 border-green-300',
+                            'cancelado': 'bg-red-100 text-red-800 border-red-300',
+                            'concluido': 'bg-blue-100 text-blue-800 border-blue-300'
+                        };
+                        
+                        const statusIcons = {
+                            'confirmado': 'fa-check-circle',
+                            'cancelado': 'fa-times-circle',
+                            'concluido': 'fa-check-double'
+                        };
+                        
+                        // Calcular duração do serviço
+                        const duracao = ag.servico ? ag.servico.duracao || 30 : 30;
+                        const duracaoTexto = duracao >= 60 ? `${Math.floor(duracao/60)}h ${duracao%60}min` : `${duracao} min`;
+                        
+                        const linha = document.createElement('tr');
+                        linha.className = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                        linha.classList.add('transition-colors', 'duration-150');
+                        
+                        linha.innerHTML = `
+                            <!-- Horário -->
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                                        <i class="fas fa-clock text-white text-lg"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-lg font-bold text-gray-900">${horaFormatada}</div>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="px-4 py-3">
-                                <select onchange="alterarStatus(${ag.id}, this.value)" class="text-sm px-2 py-1 border rounded">
+                            
+                            <!-- Data -->
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">${dataFormatada}</div>
+                            </td>
+                            
+                            <!-- Cliente -->
+                            <td class="px-4 py-4">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <i class="fas fa-user text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-bold text-gray-900">${ag.nome_cliente}</div>
+                                        <a href="tel:${ag.telefone}" class="text-xs text-blue-600 hover:text-blue-800 flex items-center mt-1">
+                                            <i class="fas fa-phone-alt mr-1"></i>${formatarTelefone(ag.telefone)}
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Barbeiro -->
+                            <td class="px-4 py-4">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-sm">
+                                        <i class="fas fa-cut text-white"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-bold text-gray-900">${ag.barbeiro ? ag.barbeiro.nome : 'Não definido'}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Serviço -->
+                            <td class="px-4 py-4">
+                                <div class="text-sm font-medium text-gray-900">${ag.servico ? ag.servico.nome : 'N/A'}</div>
+                                <div class="text-xs text-gray-500 mt-1">R$ ${ag.servico ? ag.servico.preco.toFixed(2) : '0.00'}</div>
+                            </td>
+                            
+                            <!-- Duração -->
+                            <td class="px-4 py-4 text-center">
+                                <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
+                                    <i class="fas fa-hourglass-half mr-1.5"></i>${duracaoTexto}
+                                </div>
+                            </td>
+                            
+                            <!-- Status -->
+                            <td class="px-4 py-4 text-center">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-full border ${statusColors[ag.status] || 'bg-gray-100 text-gray-800 border-gray-300'} text-xs font-bold uppercase">
+                                    <i class="fas ${statusIcons[ag.status] || 'fa-circle'} mr-1.5"></i>
+                                    ${getStatusLabel(ag.status)}
+                                </span>
+                            </td>
+                            
+                            <!-- Ações -->
+                            <td class="px-4 py-4 text-center">
+                                <select onchange="alterarStatus(${ag.id}, this.value)" 
+                                    class="px-3 py-2 text-xs font-medium bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition cursor-pointer hover:bg-gray-50 hover:border-yellow-400">
                                     <option value="">Alterar...</option>
-                                    <option value="confirmado">Confirmar</option>
-                                    <option value="concluido">Concluir</option>
-                                    <option value="cancelado">Cancelar</option>
+                                    <option value="confirmado">✅ Confirmar</option>
+                                    <option value="concluido">✓ Concluído</option>
+                                    <option value="cancelado">✗ Cancelar</option>
                                 </select>
                             </td>
                         `;
-                        tbody.appendChild(tr);
+                        
+                        tabela.appendChild(linha);
+                        
+                        // Card Mobile
+                        const card = document.createElement('div');
+                        card.className = 'bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200';
+                        
+                        card.innerHTML = `
+                            <!-- Header do Card -->
+                            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 px-4 py-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+                                            <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-white font-bold text-lg">${horaFormatada}</div>
+                                            <div class="text-yellow-100 text-xs font-medium">${dataFormatada}</div>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm text-white text-xs font-bold uppercase">
+                                        <i class="fas ${statusIcons[ag.status] || 'fa-circle'} mr-1.5"></i>
+                                        ${getStatusLabel(ag.status)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Body do Card -->
+                            <div class="p-4 space-y-3">
+                                <!-- Cliente -->
+                                <div class="flex items-center space-x-3 pb-3 border-b border-gray-100">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md flex-shrink-0">
+                                        <i class="fas fa-user text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-bold text-gray-900 truncate">${ag.nome_cliente}</div>
+                                        <a href="tel:${ag.telefone}" class="text-xs text-blue-600 hover:text-blue-800 flex items-center mt-1">
+                                            <i class="fas fa-phone-alt mr-1"></i>${formatarTelefone(ag.telefone)}
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <!-- Barbeiro -->
+                                <div class="flex items-center space-x-3 pb-3 border-b border-gray-100">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-md flex-shrink-0">
+                                        <i class="fas fa-cut text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-xs text-gray-500 uppercase font-semibold">Barbeiro</div>
+                                        <div class="text-sm font-bold text-gray-900">${ag.barbeiro ? ag.barbeiro.nome : 'Não definido'}</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Serviço e Duração -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-blue-50 rounded-lg p-3">
+                                        <div class="text-xs text-blue-600 uppercase font-semibold mb-1">Serviço</div>
+                                        <div class="text-sm font-bold text-gray-900">${ag.servico ? ag.servico.nome : 'N/A'}</div>
+                                        <div class="text-xs text-green-600 font-bold mt-1">R$ ${ag.servico ? ag.servico.preco.toFixed(2) : '0.00'}</div>
+                                    </div>
+                                    <div class="bg-purple-50 rounded-lg p-3">
+                                        <div class="text-xs text-purple-600 uppercase font-semibold mb-1">Duração</div>
+                                        <div class="text-sm font-bold text-gray-900 flex items-center">
+                                            <i class="fas fa-hourglass-half mr-1.5 text-purple-500"></i>${duracaoTexto}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer com Ação -->
+                            <div class="bg-gray-50 px-4 py-3 border-t border-gray-100">
+                                <select onchange="alterarStatus(${ag.id}, this.value)" 
+                                    class="w-full px-4 py-2.5 text-sm font-semibold bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition cursor-pointer hover:bg-yellow-50 hover:border-yellow-400">
+                                    <option value="">Alterar Status...</option>
+                                    <option value="confirmado">✅ Confirmar</option>
+                                    <option value="concluido">✓ Concluído</option>
+                                    <option value="cancelado">✗ Cancelar</option>
+                                </select>
+                            </div>
+                        `;
+                        
+                        cardsMobile.appendChild(card);
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nenhum agendamento encontrado</td></tr>';
+                    // Mensagem para desktop
+                    tabela.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="px-4 py-16 text-center">
+                                <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500 text-lg font-medium">Nenhum agendamento encontrado</p>
+                                <p class="text-gray-400 text-sm mt-2">Tente ajustar os filtros acima</p>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    // Mensagem para mobile
+                    cardsMobile.innerHTML = `
+                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-100 p-8 text-center">
+                            <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500 text-lg font-medium">Nenhum agendamento encontrado</p>
+                            <p class="text-gray-400 text-sm mt-2">Tente ajustar os filtros acima</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('Erro ao carregar agendamentos:', error);
+                const tabela = document.getElementById('tabelaAgendamentos');
+                const cardsMobile = document.getElementById('cardsAgendamentos');
+                
+                // Mensagem de erro para desktop
+                tabela.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-16 text-center">
+                            <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
+                            <p class="text-red-500 text-lg font-medium">Erro ao carregar agendamentos</p>
+                        </td>
+                    </tr>
+                `;
+                
+                // Mensagem de erro para mobile
+                cardsMobile.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-md border-2 border-red-100 p-8 text-center">
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
+                        <p class="text-red-500 text-lg font-medium">Erro ao carregar agendamentos</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function carregarListaBarbeirosAgendamentos() {
+            try {
+                const response = await fetch('/admin/barbeiros');
+                const dados = await response.json();
+                
+                // Preencher filtro da seção de agendamentos
+                const select = document.getElementById('filtroBarbeiro');
+                if (select) {
+                    select.innerHTML = '<option value="">Todos os Barbeiros</option>';
+                    
+                    if (dados.barbeiros) {
+                        dados.barbeiros.forEach(barbeiro => {
+                            const option = document.createElement('option');
+                            option.value = barbeiro.id;
+                            option.textContent = barbeiro.nome;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+                
+                // Preencher filtro do dashboard
+                const selectDash = document.getElementById('filtroBarbeiroDashboard');
+                if (selectDash) {
+                    selectDash.innerHTML = '<option value="">Todos os Barbeiros</option>';
+                    
+                    if (dados.barbeiros) {
+                        dados.barbeiros.forEach(barbeiro => {
+                            const option = document.createElement('option');
+                            option.value = barbeiro.id;
+                            option.textContent = barbeiro.nome;
+                            selectDash.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
             }
         }
 
@@ -482,51 +1578,1097 @@
                 });
                 
                 if (response.ok) {
+                    showToast('Status atualizado com sucesso!', 'success');
                     carregarAgendamentos();
                     atualizarDados();
+                } else {
+                    showToast('Erro ao atualizar status', 'error');
                 }
             } catch (error) {
-                alert('Erro ao atualizar status');
+                showToast('Erro ao atualizar status', 'error');
+            }
+        }
+
+        async function alterarStatusDashboard(id, novoStatus) {
+            if (!novoStatus) return;
+            
+            try {
+                const response = await fetch(`/admin/agendamentos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+                
+                if (response.ok) {
+                    showToast('Status atualizado com sucesso!', 'success');
+                    await carregarAgendamentosDashboard();
+                    await atualizarDados();
+                } else {
+                    showToast('Erro ao atualizar status', 'error');
+                }
+            } catch (error) {
+                showToast('Erro ao atualizar status', 'error');
+            }
+        }
+
+        function limparFiltros() {
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('filtroBarbeiro').value = '';
+            document.getElementById('filtroData').value = hoje;
+            document.getElementById('filtroStatus').value = 'confirmado';
+            carregarAgendamentos();
+        }
+
+        // ========== MODAIS ==========
+        function abrirModalHorarioBarbeiro() {
+            carregarBarbeirosParaSelect();
+            document.getElementById('modalHorarioBarbeiro').classList.remove('hidden');
+        }
+        
+        function fecharModalHorarioBarbeiro() {
+            // Reabilitar e mostrar select
+            const select = document.getElementById('selectBarbeiroHorario');
+            select.disabled = false;
+            select.parentElement.style.display = 'block';
+            select.value = '';
+            
+            // Restaurar título original
+            const titulo = document.querySelector('#modalHorarioBarbeiro h3');
+            if (titulo) {
+                titulo.innerHTML = '<i class="fas fa-user-clock mr-2"></i>Configurar Horários de Atendimento';
+            }
+            
+            // Limpar formulário
+            for (let dia = 0; dia <= 6; dia++) {
+                document.getElementById(`dia_${dia}`).checked = false;
+                document.getElementById(`horario_${dia}`).classList.add('hidden');
+                document.getElementById(`inicio_${dia}`).value = '';
+                document.getElementById(`fim_${dia}`).value = '';
+                document.getElementById(`almoco_inicio_${dia}`).value = '';
+                document.getElementById(`almoco_fim_${dia}`).value = '';
+            }
+            
+            document.getElementById('modalHorarioBarbeiro').classList.add('hidden');
+        }
+        
+        function abrirModalHorarioEspecial() {
+            carregarBarbeirosParaSelectEspecial();
+            document.getElementById('modalHorarioEspecial').classList.remove('hidden');
+        }
+        
+        function fecharModalHorarioEspecial() {
+            document.getElementById('modalHorarioEspecial').classList.add('hidden');
+        }
+        
+        function abrirModalDiaFechado() {
+            document.getElementById('modalDiaFechado').classList.remove('hidden');
+        }
+        
+        function fecharModalDiaFechado() {
+            document.getElementById('modalDiaFechado').classList.add('hidden');
+        }
+        
+        async function carregarBarbeirosParaSelect() {
+            try {
+                const response = await fetch('/admin/barbeiros');
+                const data = await response.json();
+                
+                const select = document.getElementById('selectBarbeiroHorario');
+                select.innerHTML = '<option value="">Selecione um barbeiro</option>';
+                
+                if (data.barbeiros) {
+                    data.barbeiros.forEach(barbeiro => {
+                        const option = document.createElement('option');
+                        option.value = barbeiro.id;
+                        option.textContent = barbeiro.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
+            }
+        }
+        
+        async function carregarBarbeirosParaSelectEspecial() {
+            try {
+                const response = await fetch('/admin/barbeiros');
+                const data = await response.json();
+                
+                const select = document.getElementById('horarioEspecialBarbeiro');
+                select.innerHTML = '<option value="">Todos os Barbeiros</option>';
+                
+                if (data.barbeiros) {
+                    data.barbeiros.forEach(barbeiro => {
+                        const option = document.createElement('option');
+                        option.value = barbeiro.id;
+                        option.textContent = barbeiro.nome;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
             }
         }
 
         async function carregarConfiguracao() {
+            await carregarTodosHorariosBarbeiros();
+            await carregarHorariosEspeciais();
+            await carregarDiasFechados();
+        }
+        
+        function toggleDiaHorario(dia) {
+            const checkbox = document.getElementById(`dia_${dia}`);
+            const horarioDiv = document.getElementById(`horario_${dia}`);
+            
+            if (checkbox.checked) {
+                horarioDiv.classList.remove('hidden');
+            } else {
+                horarioDiv.classList.add('hidden');
+            }
+        }
+        
+        async function carregarHorariosBarbeiro() {
+            const barbeiroId = document.getElementById('selectBarbeiroHorario').value;
+            const formDiv = document.getElementById('formHorariosBarbeiro');
+            
+            if (!barbeiroId) {
+                formDiv.classList.add('hidden');
+                return;
+            }
+            
+            formDiv.classList.remove('hidden');
+            
+            // Limpar todos os campos primeiro
+            for (let dia = 0; dia <= 6; dia++) {
+                document.getElementById(`dia_${dia}`).checked = false;
+                document.getElementById(`horario_${dia}`).classList.add('hidden');
+                document.getElementById(`inicio_${dia}`).value = '';
+                document.getElementById(`fim_${dia}`).value = '';
+                document.getElementById(`almoco_inicio_${dia}`).value = '';
+                document.getElementById(`almoco_fim_${dia}`).value = '';
+            }
+            
+            try {
+                const response = await fetch(`/admin/horarios-barbeiro/${barbeiroId}`);
+                const dados = await response.json();
+                
+                if (dados.horarios && dados.horarios.length > 0) {
+                    dados.horarios.forEach(horario => {
+                        const dia = horario.dia_semana;
+                        document.getElementById(`dia_${dia}`).checked = true;
+                        document.getElementById(`horario_${dia}`).classList.remove('hidden');
+                        document.getElementById(`inicio_${dia}`).value = horario.horario_inicio;
+                        document.getElementById(`fim_${dia}`).value = horario.horario_fim;
+                        document.getElementById(`almoco_inicio_${dia}`).value = horario.intervalo_almoco_inicio || '';
+                        document.getElementById(`almoco_fim_${dia}`).value = horario.intervalo_almoco_fim || '';
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar horários do barbeiro:', error);
+            }
+        }
+        
+        async function salvarHorariosBarbeiro() {
+            const barbeiroId = document.getElementById('selectBarbeiroHorario').value;
+            
+            if (!barbeiroId) {
+                showToast('Selecione um barbeiro', 'warning');
+                return;
+            }
+            
+            const horarios = [];
+            
+            for (let dia = 0; dia <= 6; dia++) {
+                const checkbox = document.getElementById(`dia_${dia}`);
+                
+                if (checkbox.checked) {
+                    const inicio = document.getElementById(`inicio_${dia}`).value;
+                    const fim = document.getElementById(`fim_${dia}`).value;
+                    const almocoInicio = document.getElementById(`almoco_inicio_${dia}`).value;
+                    const almocoFim = document.getElementById(`almoco_fim_${dia}`).value;
+                    
+                    if (!inicio || !fim) {
+                        showToast('Preencha os horários de início e fim para o dia selecionado', 'warning');
+                        return;
+                    }
+                    
+                    horarios.push({
+                        dia_semana: dia,
+                        horario_inicio: inicio,
+                        horario_fim: fim,
+                        intervalo_almoco_inicio: almocoInicio || null,
+                        intervalo_almoco_fim: almocoFim || null
+                    });
+                }
+            }
+            
+            if (horarios.length === 0) {
+                showToast('Selecione pelo menos um dia da semana', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/horarios-barbeiro/${barbeiroId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ horarios })
+                });
+                
+                if (response.ok) {
+                    showToast('Horários salvos com sucesso!', 'success');
+                    fecharModalHorarioBarbeiro();
+                    // Limpar formulário
+                    document.getElementById('selectBarbeiroHorario').value = '';
+                    for (let dia = 0; dia <= 6; dia++) {
+                        document.getElementById(`dia_${dia}`).checked = false;
+                        document.getElementById(`horario_${dia}`).classList.add('hidden');
+                        document.getElementById(`inicio_${dia}`).value = '';
+                        document.getElementById(`fim_${dia}`).value = '';
+                        document.getElementById(`almoco_inicio_${dia}`).value = '';
+                        document.getElementById(`almoco_fim_${dia}`).value = '';
+                    }
+                    await carregarTodosHorariosBarbeiros();
+                } else {
+                    const error = await response.json();
+                    showToast('Erro ao salvar horários: ' + (error.erro || 'Erro desconhecido'), 'error');
+                }
+            } catch (error) {
+                showToast('Erro ao salvar horários', 'error');
+                console.error(error);
+            }
+        }
+        
+        async function carregarTodosHorariosBarbeiros() {
+            try {
+                const responseBarbeiros = await fetch('/admin/barbeiros');
+                const dataBarbeiros = await responseBarbeiros.json();
+                
+                const container = document.getElementById('listaHorariosBarbeiros');
+                container.innerHTML = '';
+                
+                if (!dataBarbeiros.barbeiros || dataBarbeiros.barbeiros.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center col-span-full py-8">Nenhum barbeiro cadastrado</p>';
+                    return;
+                }
+                
+                for (const barbeiro of dataBarbeiros.barbeiros) {
+                    const responseHorarios = await fetch(`/admin/horarios-barbeiro/${barbeiro.id}`);
+                    const dataHorarios = await responseHorarios.json();
+                    
+                    const card = document.createElement('div');
+                    card.className = 'group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100';
+                    
+                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    const diasCompletos = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                    let horariosHTML = '';
+                    let totalDias = 0;
+                    
+                    if (dataHorarios.horarios && dataHorarios.horarios.length > 0) {
+                        totalDias = dataHorarios.horarios.length;
+                        dataHorarios.horarios.forEach(h => {
+                            const temAlmoco = h.intervalo_almoco_inicio && h.intervalo_almoco_fim;
+                            horariosHTML += `
+                                <div class="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0 hover:bg-blue-50 px-2 rounded transition">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                            ${diasSemana[h.dia_semana]}
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm">${diasCompletos[h.dia_semana]}</p>
+                                            <p class="text-xs text-gray-500">
+                                                <i class="fas fa-clock mr-1"></i>${h.horario_inicio} - ${h.horario_fim}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    ${temAlmoco ? `
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-500">Almoço</p>
+                                            <p class="text-xs font-semibold text-orange-600">${h.intervalo_almoco_inicio}-${h.intervalo_almoco_fim}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        horariosHTML = `
+                            <div class="text-center py-8">
+                                <i class="fas fa-calendar-times text-4xl text-gray-300 mb-2"></i>
+                                <p class="text-sm text-gray-500">Sem horários configurados</p>
+                            </div>
+                        `;
+                    }
+                    
+                    const fotoUrl = barbeiro.foto_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(barbeiro.nome) + '&background=3b82f6&color=fff&size=128';
+                    
+                    card.innerHTML = `
+                        <!-- Header com Gradiente -->
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-4 relative">
+                            <div class="flex items-center space-x-4">
+                                <div class="relative">
+                                    <img src="${fotoUrl}" 
+                                         alt="${barbeiro.nome}"
+                                         class="w-16 h-16 rounded-full border-4 border-white shadow-lg object-cover">
+                                    <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white rounded-full"></div>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-bold text-white mb-1">${barbeiro.nome}</h4>
+                                    <div class="flex items-center space-x-3 text-white/90 text-sm">
+                                        <span>
+                                            <i class="fas fa-calendar-check mr-1"></i>${totalDias} ${totalDias === 1 ? 'dia' : 'dias'}
+                                        </span>
+                                        ${barbeiro.ativo ? 
+                                            '<span class="bg-green-400/30 px-2 py-0.5 rounded-full text-xs"><i class="fas fa-check-circle mr-1"></i>Ativo</span>' : 
+                                            '<span class="bg-red-400/30 px-2 py-0.5 rounded-full text-xs"><i class="fas fa-times-circle mr-1"></i>Inativo</span>'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Conteúdo -->
+                        <div class="p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h5 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                                    <i class="fas fa-clock mr-2 text-blue-600"></i>Horários de Trabalho
+                                </h5>
+                            </div>
+                            <div class="space-y-1 max-h-64 overflow-y-auto custom-scrollbar">
+                                ${horariosHTML}
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="bg-gray-50 px-4 py-3 border-t border-gray-100">
+                            <button onclick="editarHorarioBarbeiro(${barbeiro.id}, '${barbeiro.nome.replace(/'/g, "\\'")}')"
+                                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg transition shadow-sm hover:shadow-md">
+                                <i class="fas fa-edit mr-2"></i>Editar Horários
+                            </button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar horários dos barbeiros:', error);
+                const container = document.getElementById('listaHorariosBarbeiros');
+                container.innerHTML = '<p class="text-red-500 text-center col-span-full">Erro ao carregar horários</p>';
+            }
+        }
+        
+        async function editarHorarioBarbeiro(barbeiroId, barbeiroNome) {
+            // Abrir modal primeiro
+            abrirModalHorarioBarbeiro();
+            
+            // Desabilitar e ocultar o select
+            const select = document.getElementById('selectBarbeiroHorario');
+            select.value = barbeiroId;
+            select.disabled = true;
+            select.parentElement.style.display = 'none';
+            
+            // Atualizar título do modal
+            const titulo = document.querySelector('#modalHorarioBarbeiro h3');
+            if (titulo) {
+                titulo.innerHTML = `<i class="fas fa-user-clock mr-2"></i>Editar Horários - ${barbeiroNome}`;
+            }
+            
+            // Carregar horários do barbeiro
+            await carregarHorariosBarbeiro();
+        }
+
+        async function carregarNomeBarbearia() {
             try {
                 const response = await fetch('/admin/configuracao');
                 const config = await response.json();
-                
-                document.getElementById('configNome').value = config.nome_barbearia;
-                document.getElementById('configAbertura').value = config.horario_abertura;
-                document.getElementById('configFechamento').value = config.horario_fechamento;
-                document.getElementById('configAlmocoInicio').value = config.intervalo_almoco_inicio || '';
-                document.getElementById('configAlmocoFim').value = config.intervalo_almoco_fim || '';
+                document.getElementById('nomeBarbeariaSidebar').textContent = config.nome_barbearia || 'Admin';
             } catch (error) {
-                console.error('Erro ao carregar configuração:', error);
+                console.error('Erro ao carregar nome da barbearia:', error);
+                document.getElementById('nomeBarbeariaSidebar').textContent = 'Admin';
             }
         }
 
         async function salvarConfiguracao() {
-            const config = {
-                nome_barbearia: document.getElementById('configNome').value,
-                horario_abertura: document.getElementById('configAbertura').value,
-                horario_fechamento: document.getElementById('configFechamento').value,
-                duracao_atendimento: 30,
-                intervalo_almoco_inicio: document.getElementById('configAlmocoInicio').value,
-                intervalo_almoco_fim: document.getElementById('configAlmocoFim').value
-            };
-            
+            // Esta função foi removida, agora os horários são por barbeiro
+            showToast('Os horários agora são configurados individualmente por barbeiro. Selecione um barbeiro acima.', 'info');
+        }
+
+        async function carregarListaBarbeirosEstatisticas() {
             try {
-                const response = await fetch('/admin/configuracao', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
+                const response = await fetch('/admin/barbeiros');
+                const dados = await response.json();
                 
-                if (response.ok) {
-                    alert('Configuração salva com sucesso!');
+                const select = document.getElementById('estatFiltroBarbeiro');
+                select.innerHTML = '<option value="">Todos os Barbeiros</option>';
+                
+                if (dados.barbeiros) {
+                    dados.barbeiros.forEach(barbeiro => {
+                        const option = document.createElement('option');
+                        option.value = barbeiro.id;
+                        option.textContent = barbeiro.nome;
+                        select.appendChild(option);
+                    });
                 }
             } catch (error) {
-                alert('Erro ao salvar configuração');
+                console.error('Erro ao carregar barbeiros:', error);
+            }
+        }
+
+        async function carregarEstatisticasBarbeiros() {
+            const barbeiroId = document.getElementById('estatFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('estatDataInicio').value;
+            const dataFim = document.getElementById('estatDataFim').value;
+            
+            let url = '/admin/estatisticas-barbeiros';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += '?' + params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const tbody = document.getElementById('tabelaEstatisticasBarbeiros');
+                tbody.innerHTML = '';
+                
+                if (dados.estatisticas && dados.estatisticas.length > 0) {
+                    dados.estatisticas.forEach(stat => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b hover:bg-gray-50';
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 text-gray-800 font-medium">${stat.barbeiro_nome}</td>
+                            <td class="px-4 py-3 text-gray-600">${stat.servico_nome}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100 text-yellow-800 font-bold">
+                                    ${stat.quantidade}
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Nenhum atendimento no período selecionado</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                const tbody = document.getElementById('tabelaEstatisticasBarbeiros');
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-red-500">Erro ao carregar estatísticas</td></tr>';
+            }
+        }
+
+        function limparFiltrosEstatisticas() {
+            document.getElementById('estatFiltroBarbeiro').value = '';
+            document.getElementById('estatDataInicio').value = '';
+            document.getElementById('estatDataFim').value = '';
+            carregarEstatisticasBarbeiros();
+        }
+
+        // ========== DASHBOARD ==========
+        let chartAtendimentosBarbeiro = null;
+        let chartServicos = null;
+
+        async function carregarDashboard() {
+            await Promise.all([
+                carregarEstatisticasGerais(),
+                carregarGraficoAtendimentosBarbeiro(),
+                carregarGraficoServicos(),
+                carregarDiasTrabalhados(),
+                carregarRankingBarbeiros()
+            ]);
+        }
+
+        async function carregarEstatisticasGerais() {
+            const barbeiroId = document.getElementById('dashFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            let url = '/admin/agendamentos?';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const agendamentos = dados.agendamentos || [];
+                // Filtrar apenas concluídos para o total (não contar cancelados)
+                const concluidos = agendamentos.filter(a => a.status === 'concluido');
+                const cancelados = agendamentos.filter(a => a.status === 'cancelado').length;
+                
+                document.getElementById('dashTotalAtendimentos').textContent = concluidos.length;
+                document.getElementById('dashCancelados').textContent = cancelados;
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas gerais:', error);
+            }
+        }
+
+        // Variável global para armazenar agendamentos
+        let agendamentosGlobais = [];
+
+        async function carregarGraficoAtendimentosBarbeiro() {
+            const barbeiroId = document.getElementById('dashFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            let url = '/admin/agendamentos?status=concluido&';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const agendamentos = dados.agendamentos || [];
+                agendamentosGlobais = agendamentos; // Armazenar para uso posterior
+                const contagemPorBarbeiro = {};
+                
+                agendamentos.forEach(ag => {
+                    const nome = ag.barbeiro ? ag.barbeiro.nome : 'Sem Barbeiro';
+                    contagemPorBarbeiro[nome] = (contagemPorBarbeiro[nome] || 0) + 1;
+                });
+                
+                const labels = Object.keys(contagemPorBarbeiro);
+                const valores = Object.values(contagemPorBarbeiro);
+                const maxValor = valores.length > 0 ? Math.max(...valores) : 0;
+                
+                const ctx = document.getElementById('chartAtendimentosBarbeiro');
+                
+                if (chartAtendimentosBarbeiro) {
+                    chartAtendimentosBarbeiro.destroy();
+                }
+                
+                chartAtendimentosBarbeiro = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Atendimentos',
+                            data: valores,
+                            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                            borderColor: 'rgb(16, 185, 129)',
+                            hoverBackgroundColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 3,
+                            borderRadius: 8,
+                            borderSkipped: false,
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        onClick: (event, activeElements) => {
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const barbeiroNome = labels[index];
+                                exibirDetalhesBarbeiro(barbeiroNome);
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                cornerRadius: 8
+                            },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#374151',
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: function(value) {
+                                    return value;
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: maxValor + 1,
+                                ticks: {
+                                    stepSize: 1,
+                                    precision: 0,
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 12,
+                                        weight: '500'
+                                    }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    },
+                    plugins: [{
+                        afterDatasetsDraw: function(chart) {
+                            const ctx = chart.ctx;
+                            chart.data.datasets.forEach(function(dataset, i) {
+                                const meta = chart.getDatasetMeta(i);
+                                if (!meta.hidden) {
+                                    meta.data.forEach(function(element, index) {
+                                        ctx.fillStyle = '#1f2937';
+                                        const fontSize = 14;
+                                        const fontStyle = 'bold';
+                                        const fontFamily = 'Inter';
+                                        ctx.font = fontStyle + ' ' + fontSize + 'px ' + fontFamily;
+                                        const dataString = dataset.data[index].toString();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'bottom';
+                                        const padding = 5;
+                                        const position = element.tooltipPosition();
+                                        ctx.fillText(dataString, position.x, position.y - padding);
+                                    });
+                                }
+                            });
+                        }
+                    }]
+                });
+            } catch (error) {
+                console.error('Erro ao carregar gráfico de barbeiros:', error);
+            }
+        }
+
+        async function carregarGraficoServicos() {
+            const barbeiroId = document.getElementById('dashFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            let url = '/admin/agendamentos?status=concluido&';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const agendamentos = dados.agendamentos || [];
+                
+                // Organizar dados por serviço
+                const servicosData = {};
+                
+                agendamentos.forEach(ag => {
+                    if (!ag.servico) return;
+                    
+                    const servicoNome = ag.servico.nome;
+                    const barbeiroNome = ag.barbeiro ? ag.barbeiro.nome : 'Sem Barbeiro';
+                    
+                    if (!servicosData[servicoNome]) {
+                        servicosData[servicoNome] = {
+                            nome: servicoNome,
+                            valor: ag.servico.preco || 0,
+                            total: 0,
+                            barbeiros: {}
+                        };
+                    }
+                    
+                    servicosData[servicoNome].total++;
+                    servicosData[servicoNome].barbeiros[barbeiroNome] = 
+                        (servicosData[servicoNome].barbeiros[barbeiroNome] || 0) + 1;
+                });
+                
+                // Converter para array e ordenar por total (descendente)
+                const servicosArray = Object.values(servicosData).map(servico => {
+                    // Encontrar barbeiro que mais fez esse serviço
+                    let topBarbeiro = 'N/A';
+                    let maxQtd = 0;
+                    
+                    Object.entries(servico.barbeiros).forEach(([barbeiro, qtd]) => {
+                        if (qtd > maxQtd) {
+                            maxQtd = qtd;
+                            topBarbeiro = barbeiro;
+                        }
+                    });
+                    
+                    return {
+                        nome: servico.nome,
+                        valor: servico.valor,
+                        total: servico.total,
+                        topBarbeiro: topBarbeiro,
+                        topBarbeiroQtd: maxQtd
+                    };
+                }).sort((a, b) => b.total - a.total);
+                
+                // Preencher tabela
+                const tbody = document.getElementById('tabelaServicos');
+                tbody.innerHTML = '';
+                
+                // Preencher cards mobile
+                const cardsMobile = document.getElementById('cardsServicos');
+                cardsMobile.innerHTML = '';
+                
+                if (servicosArray.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fas fa-inbox text-3xl mb-2"></i>
+                                <p>Nenhum serviço encontrado</p>
+                            </td>
+                        </tr>
+                    `;
+                    cardsMobile.innerHTML = `
+                        <div class="bg-white rounded-lg p-8 text-center text-gray-500 border-2 border-gray-100">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p>Nenhum serviço encontrado</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                servicosArray.forEach((servico, index) => {
+                    // Row para desktop
+                    const tr = document.createElement('tr');
+                    tr.className = index % 2 === 0 ? 'bg-white hover:bg-purple-50' : 'bg-gray-50 hover:bg-purple-50';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
+                                <span class="font-medium text-gray-900">${servico.nome}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-green-600 font-semibold">R$ ${servico.valor.toFixed(2)}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                                ${servico.total}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-user-tie text-yellow-600 mr-2"></i>
+                                <span class="text-gray-900">${servico.topBarbeiro}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800">
+                                ${servico.topBarbeiroQtd}
+                            </span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                    
+                    // Card para mobile
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg p-4 border-2 border-gray-100 shadow-sm';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center flex-1">
+                                <div class="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                                <span class="font-bold text-gray-900">${servico.nome}</span>
+                            </div>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 ml-2">
+                                ${servico.total}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="bg-green-50 rounded-lg p-2">
+                                <div class="text-xs text-green-600 font-semibold mb-1">Valor</div>
+                                <div class="text-green-700 font-bold">R$ ${servico.valor.toFixed(2)}</div>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-2">
+                                <div class="text-xs text-yellow-600 font-semibold mb-1">Top Barbeiro</div>
+                                <div class="text-gray-900 font-medium truncate">${servico.topBarbeiro}</div>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 mt-1">
+                                    ${servico.topBarbeiroQtd}x
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                    cardsMobile.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar tabela de serviços:', error);
+            }
+        }
+
+        async function carregarDiasTrabalhados() {
+            const barbeiroId = document.getElementById('dashFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            let url = '/admin/agendamentos?status=concluido&';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const agendamentos = dados.agendamentos || [];
+                const diasPorBarbeiro = {};
+                
+                agendamentos.forEach(ag => {
+                    if (ag.barbeiro) {
+                        const nome = ag.barbeiro.nome;
+                        const data = new Date(ag.data_hora).toDateString();
+                        
+                        if (!diasPorBarbeiro[nome]) {
+                            diasPorBarbeiro[nome] = new Set();
+                        }
+                        diasPorBarbeiro[nome].add(data);
+                    }
+                });
+                
+                const tbody = document.getElementById('tabelaDiasTrabalhados');
+                tbody.innerHTML = '';
+                
+                const cardsMobile = document.getElementById('cardsDiasTrabalhados');
+                cardsMobile.innerHTML = '';
+                
+                if (Object.keys(diasPorBarbeiro).length > 0) {
+                    Object.entries(diasPorBarbeiro).forEach(([nome, dias]) => {
+                        // Row para desktop
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50';
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 text-gray-800 font-medium">${nome}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-bold">
+                                    ${dias.size} ${dias.size === 1 ? 'dia' : 'dias'}
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                        
+                        // Card para mobile
+                        const card = document.createElement('div');
+                        card.className = 'bg-white rounded-lg p-4 border-2 border-gray-100 shadow-sm flex items-center justify-between';
+                        card.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md">
+                                    <i class="fas fa-user-tie text-white"></i>
+                                </div>
+                                <span class="text-gray-800 font-bold">${nome}</span>
+                            </div>
+                            <span class="inline-flex items-center justify-center px-4 py-2 rounded-full bg-green-100 text-green-800 font-bold">
+                                ${dias.size} ${dias.size === 1 ? 'dia' : 'dias'}
+                            </span>
+                        `;
+                        cardsMobile.appendChild(card);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" class="text-center py-8 text-gray-500">Nenhum dado disponível</td></tr>';
+                    cardsMobile.innerHTML = `
+                        <div class="bg-white rounded-lg p-8 text-center text-gray-500 border-2 border-gray-100">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p>Nenhum dado disponível</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dias trabalhados:', error);
+            }
+        }
+
+        async function carregarRankingBarbeiros() {
+            const barbeiroId = document.getElementById('dashFiltroBarbeiro').value;
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            let url = '/admin/agendamentos?status=concluido&';
+            const params = [];
+            if (barbeiroId) params.push(`barbeiro_id=${barbeiroId}`);
+            if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+            if (dataFim) params.push(`data_fim=${dataFim}`);
+            if (params.length > 0) url += params.join('&');
+            
+            try {
+                const response = await fetch(url);
+                const dados = await response.json();
+                
+                const agendamentos = dados.agendamentos || [];
+                const contagemPorBarbeiro = {};
+                
+                agendamentos.forEach(ag => {
+                    if (ag.barbeiro) {
+                        const nome = ag.barbeiro.nome;
+                        contagemPorBarbeiro[nome] = (contagemPorBarbeiro[nome] || 0) + 1;
+                    }
+                });
+                
+                const ranking = Object.entries(contagemPorBarbeiro)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                const container = document.getElementById('rankingBarbeiros');
+                container.innerHTML = '';
+                
+                if (ranking.length > 0) {
+                    ranking.forEach(([nome, total], index) => {
+                        const medalhas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                        const cores = ['from-yellow-400 to-yellow-500', 'from-gray-300 to-gray-400', 'from-orange-400 to-orange-500', 'from-blue-400 to-blue-500', 'from-purple-400 to-purple-500'];
+                        
+                        const div = document.createElement('div');
+                        div.className = `bg-gradient-to-r ${cores[index]} rounded-lg p-4 text-white shadow-md`;
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">${medalhas[index]}</span>
+                                    <div>
+                                        <p class="font-bold text-lg">${nome}</p>
+                                        <p class="text-sm opacity-90">${total} ${total === 1 ? 'atendimento' : 'atendimentos'}</p>
+                                    </div>
+                                </div>
+                                <div class="text-3xl font-bold">#${index + 1}</div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum dado disponível</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ranking:', error);
+            }
+        }
+
+        function limparFiltrosDashboard() {
+            document.getElementById('dashFiltroBarbeiro').value = '';
+            document.getElementById('dashDataInicio').value = '';
+            document.getElementById('dashDataFim').value = '';
+            carregarDashboard();
+        }
+
+        function exibirDetalhesBarbeiro(barbeiroNome) {
+            const dataInicio = document.getElementById('dashDataInicio').value;
+            const dataFim = document.getElementById('dashDataFim').value;
+            
+            // Filtrar agendamentos do barbeiro
+            const agendamentosBarbeiro = agendamentosGlobais.filter(ag => {
+                return ag.barbeiro && ag.barbeiro.nome === barbeiroNome;
+            });
+            
+            // Calcular dias trabalhados
+            const diasUnicos = new Set();
+            agendamentosBarbeiro.forEach(ag => {
+                const data = new Date(ag.data_horario).toLocaleDateString('pt-BR');
+                diasUnicos.add(data);
+            });
+            
+            // Contar serviços realizados
+            const servicosContagem = {};
+            agendamentosBarbeiro.forEach(ag => {
+                if (ag.servico) {
+                    const servicoNome = ag.servico.nome;
+                    servicosContagem[servicoNome] = (servicosContagem[servicoNome] || 0) + 1;
+                }
+            });
+            
+            // Ordenar serviços por quantidade
+            const servicosArray = Object.entries(servicosContagem)
+                .sort((a, b) => b[1] - a[1]);
+            
+            const totalAtendimentos = agendamentosBarbeiro.length;
+            
+            // Preencher modal
+            document.getElementById('modalBarbeiroNome').textContent = barbeiroNome;
+            document.getElementById('modalDiasTrabalhados').textContent = diasUnicos.size;
+            document.getElementById('modalTotalAtendimentos').textContent = totalAtendimentos;
+            document.getElementById('modalTotalServicos').textContent = servicosArray.length;
+            
+            // Preencher tabela de serviços
+            const tbody = document.getElementById('modalTabelaServicos');
+            tbody.innerHTML = '';
+            
+            servicosArray.forEach((item, index) => {
+                const [servico, quantidade] = item;
+                const percentual = ((quantidade / totalAtendimentos) * 100).toFixed(1);
+                
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-green-50' : 'bg-gray-50 hover:bg-green-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                            <span class="font-medium text-gray-900">${servico}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                            ${quantidade}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <span class="text-gray-700 font-semibold">${percentual}%</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Exibir modal
+            document.getElementById('modalDetalhesBarbeiro').classList.remove('hidden');
+        }
+
+        function fecharModalDetalhesBarbeiro() {
+            document.getElementById('modalDetalhesBarbeiro').classList.add('hidden');
+        }
+
+        // Fechar modal ao clicar fora
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('modalDetalhesBarbeiro');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        fecharModalDetalhesBarbeiro();
+                    }
+                });
+            }
+        });
+
+        async function carregarListaBarbeirosDashboard() {
+            try {
+                const response = await fetch('/admin/barbeiros');
+                const dados = await response.json();
+                
+                const select = document.getElementById('dashFiltroBarbeiro');
+                if (select) {
+                    select.innerHTML = '<option value="">Todos os Barbeiros</option>';
+                    
+                    if (dados.barbeiros) {
+                        dados.barbeiros.forEach(barbeiro => {
+                            const option = document.createElement('option');
+                            option.value = barbeiro.id;
+                            option.textContent = barbeiro.nome;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
             }
         }
 
@@ -544,7 +2686,10 @@
                         div.className = 'bg-white border border-gray-200 p-4 rounded-lg flex items-center justify-between';
                         div.innerHTML = `
                             <div>
-                                <p class="font-semibold text-gray-800">${new Date(h.data + 'T00:00:00').toLocaleDateString('pt-BR')} - ${h.descricao || 'Sem descrição'}</p>
+                                <p class="font-semibold text-gray-800">
+                                    ${new Date(h.data + 'T00:00:00').toLocaleDateString('pt-BR')} - ${h.descricao || 'Sem descrição'}
+                                    <span class="ml-2 text-sm text-yellow-600">(${h.barbeiro_nome || 'Todos'})</span>
+                                </p>
                                 <p class="text-sm text-gray-600">
                                     <i class="fas fa-clock mr-1"></i>${h.horario_abertura} às ${h.horario_fechamento}
                                     ${h.intervalo_almoco_inicio ? ` | Almoço: ${h.intervalo_almoco_inicio} - ${h.intervalo_almoco_fim}` : ''}
@@ -566,6 +2711,7 @@
         }
 
         async function adicionarHorarioEspecial() {
+            const barbeiroId = document.getElementById('horarioEspecialBarbeiro').value;
             const data = document.getElementById('horarioEspecialData').value;
             const descricao = document.getElementById('horarioEspecialDesc').value;
             const abertura = document.getElementById('horarioEspecialAbertura').value;
@@ -574,7 +2720,7 @@
             const almocoFim = document.getElementById('horarioEspecialAlmocoFim').value;
             
             if (!data || !abertura || !fechamento) {
-                alert('Preencha data, abertura e fechamento');
+                showToast('Preencha data, abertura e fechamento', 'warning');
                 return;
             }
             
@@ -583,6 +2729,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        barbeiro_id: barbeiroId || null,
                         data,
                         descricao,
                         horario_abertura: abertura,
@@ -593,44 +2740,139 @@
                 });
                 
                 if (response.ok) {
-                    alert('Horário especial adicionado!');
+                    showToast('Horário especial adicionado!', 'success');
                     // Limpar campos
+                    document.getElementById('horarioEspecialBarbeiro').value = '';
                     document.getElementById('horarioEspecialData').value = '';
                     document.getElementById('horarioEspecialDesc').value = '';
                     document.getElementById('horarioEspecialAbertura').value = '';
                     document.getElementById('horarioEspecialFechamento').value = '';
                     document.getElementById('horarioEspecialAlmocoInicio').value = '';
                     document.getElementById('horarioEspecialAlmocoFim').value = '';
-                    carregarHorariosEspeciais();
+                    fecharModalHorarioEspecial();
+                    await carregarHorariosEspeciais();
                 } else {
-                    const erro = await response.json();
-                    alert(erro.erro || 'Erro ao adicionar horário especial');
+                    const error = await response.json();
+                    showToast('Erro: ' + (error.erro || 'Erro ao adicionar horário especial'), 'error');
                 }
             } catch (error) {
-                alert('Erro ao adicionar horário especial');
+                showToast('Erro ao adicionar horário especial', 'error');
             }
         }
 
-        async function deletarHorarioEspecial(id) {
-            if (!confirm('Deseja remover este horário especial?')) return;
+        
+        async function adicionarDiaFechado() {
+            const data = document.getElementById('diaFechadoData').value;
+            const motivo = document.getElementById('diaFechadoMotivo').value;
+            
+            if (!data) {
+                showToast('Selecione uma data', 'warning');
+                return;
+            }
             
             try {
-                const response = await fetch(`/admin/horarios-especiais/${id}`, {
+                const response = await fetch('/admin/dias-indisponiveis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data,
+                        motivo: motivo || 'Fechado'
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast('Dia marcado como fechado!', 'success');
+                    document.getElementById('diaFechadoData').value = '';
+                    document.getElementById('diaFechadoMotivo').value = '';
+                    fecharModalDiaFechado();
+                    await carregarDiasFechados();
+                } else {
+                    const error = await response.json();
+                    showToast('Erro: ' + (error.erro || 'Erro ao marcar dia como fechado'), 'error');
+                }
+            } catch (error) {
+                showToast('Erro ao marcar dia como fechado', 'error');
+            }
+        }
+        
+        async function carregarDiasFechados() {
+            try {
+                const response = await fetch('/admin/dias-indisponiveis');
+                const dados = await response.json();
+                
+                const lista = document.getElementById('listaDiasFechados');
+                lista.innerHTML = '';
+                
+                if (dados.dias_indisponiveis && dados.dias_indisponiveis.length > 0) {
+                    dados.dias_indisponiveis.forEach(dia => {
+                        const div = document.createElement('div');
+                        div.className = 'group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-red-100';
+                        div.innerHTML = `
+                            <div class="flex items-center">
+                                <!-- Barra lateral colorida -->
+                                <div class="w-2 h-full bg-gradient-to-b from-red-500 to-red-600 absolute left-0"></div>
+                                
+                                <!-- Conteúdo -->
+                                <div class="flex-1 p-4 pl-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="bg-red-100 p-3 rounded-lg">
+                                                <i class="fas fa-door-closed text-red-600 text-xl"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-bold text-gray-800 text-lg">
+                                                    ${new Date(dia.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                                                </p>
+                                                <div class="flex items-center space-x-2 mt-1">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                                        <i class="fas fa-ban mr-1"></i>${dia.motivo || 'Fechado'}
+                                                    </span>
+                                                    <span class="text-xs text-gray-500">
+                                                        <i class="fas fa-info-circle mr-1"></i>Nenhum barbeiro disponível
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button onclick="deletarDiaFechado(${dia.id})" 
+                                            class="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        lista.appendChild(div);
+                    });
+                } else {
+                    lista.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum dia marcado como fechado</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dias fechados:', error);
+            }
+        }
+        
+        async function deletarDiaFechado(id) {
+            if (!confirm('Deseja realmente remover este dia fechado?')) return;
+            
+            try {
+                const response = await fetch(`/admin/dias-indisponiveis/${id}`, {
                     method: 'DELETE'
                 });
                 
                 if (response.ok) {
-                    alert('Horário especial removido!');
-                    carregarHorariosEspeciais();
+                    showToast('Dia removido com sucesso!', 'success');
+                    await carregarDiasFechados();
                 } else {
-                    alert('Erro ao remover horário especial');
+                    showToast('Erro ao deletar dia fechado', 'error');
                 }
             } catch (error) {
-                alert('Erro ao remover horário especial');
+                showToast('Erro ao deletar dia fechado', 'error');
             }
         }
 
         function limparFiltros() {
+            document.getElementById('filtroBarbeiro').value = '';
             document.getElementById('filtroData').value = '';
             document.getElementById('filtroStatus').value = '';
             carregarAgendamentos();
@@ -639,7 +2881,6 @@
         // Funções auxiliares
         function getStatusColor(status) {
             const cores = {
-                'pendente': 'bg-yellow-100 text-yellow-800',
                 'confirmado': 'bg-green-100 text-green-800',
                 'cancelado': 'bg-red-100 text-red-800',
                 'concluido': 'bg-blue-100 text-blue-800'
@@ -649,7 +2890,6 @@
 
         function getStatusLabel(status) {
             const labels = {
-                'pendente': 'Pendente',
                 'confirmado': 'Confirmado',
                 'cancelado': 'Cancelado',
                 'concluido': 'Concluído'
@@ -679,8 +2919,8 @@
     </script>
 
     <!-- Modal Barbeiro -->
-    <div id="modalBarbeiro" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="modalBarbeiro" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-gray-800" id="tituloModalBarbeiro">Novo Barbeiro</h3>
                 <button onclick="fecharModalBarbeiro()" class="text-gray-400 hover:text-gray-600">
@@ -698,10 +2938,45 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">URL da Foto</label>
-                    <input type="url" id="barbeiroFoto" placeholder="https://exemplo.com/foto.jpg"
-                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none transition">
-                    <p class="text-xs text-gray-500 mt-1">Cole a URL de uma imagem online ou deixe em branco para usar placeholder</p>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Foto do Barbeiro</label>
+                    <div class="space-y-3">
+                        <!-- Preview da foto -->
+                        <div class="flex justify-center">
+                            <div class="relative">
+                                <img id="previewFotoBarbeiro" src="" alt="Preview" 
+                                    class="w-32 h-32 rounded-full object-cover border-4 border-gray-200 shadow-lg hidden">
+                                <div id="placeholderFoto" class="w-32 h-32 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center border-4 border-gray-200 shadow-lg">
+                                    <i class="fas fa-user text-white text-5xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload de arquivo -->
+                        <div>
+                            <label class="block w-full">
+                                <div class="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-yellow-600 transition bg-gray-50 hover:bg-yellow-50">
+                                    <i class="fas fa-cloud-upload-alt text-gray-400 text-xl mr-2"></i>
+                                    <span class="text-gray-600 font-medium">Selecionar Foto</span>
+                                </div>
+                                <input type="file" id="barbeiroFotoUpload" accept="image/*" class="hidden" onchange="previewFoto(this)">
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Formatos aceitos: JPG, PNG, GIF (máx. 5MB)</p>
+                        </div>
+                        
+                        <!-- OU URL -->
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white text-gray-500">OU</span>
+                            </div>
+                        </div>
+                        
+                        <input type="url" id="barbeiroFoto" placeholder="https://exemplo.com/foto.jpg" onchange="previewFotoUrl(this)"
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none transition">
+                        <p class="text-xs text-gray-500">Cole a URL de uma imagem online</p>
+                    </div>
                 </div>
 
                 <div>
@@ -737,8 +3012,8 @@
     </div>
 
     <!-- Modal Serviço -->
-    <div id="modalServico" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="modalServico" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-gray-800" id="tituloModalServico">Novo Serviço</h3>
                 <button onclick="fecharModalServico()" class="text-gray-400 hover:text-gray-600">
@@ -841,7 +3116,7 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar barbeiros:', error);
-                alert('Erro ao carregar barbeiros');
+                showToast('Erro ao carregar barbeiros', 'error');
             }
         }
 
@@ -889,6 +3164,16 @@
                         document.getElementById('barbeiroOrdem').value = barbeiro.ordem;
                         document.getElementById('barbeiroAtivo').checked = barbeiro.ativo;
                         
+                        // Mostrar preview da foto se existir
+                        if (barbeiro.foto_url && barbeiro.foto_url !== 'https://via.placeholder.com/150') {
+                            document.getElementById('previewFotoBarbeiro').src = barbeiro.foto_url;
+                            document.getElementById('previewFotoBarbeiro').classList.remove('hidden');
+                            document.getElementById('placeholderFoto').classList.add('hidden');
+                        } else {
+                            document.getElementById('previewFotoBarbeiro').classList.add('hidden');
+                            document.getElementById('placeholderFoto').classList.remove('hidden');
+                        }
+                        
                         // Marcar serviços
                         const servicosIds = barbeiro.servicos ? barbeiro.servicos.map(s => s.id) : [];
                         servicosGlobal.forEach(servico => {
@@ -905,6 +3190,9 @@
                 document.getElementById('tituloModalBarbeiro').textContent = 'Novo Barbeiro';
                 document.getElementById('formBarbeiro').reset();
                 document.getElementById('barbeiroId').value = '';
+                // Resetar preview
+                document.getElementById('previewFotoBarbeiro').classList.add('hidden');
+                document.getElementById('placeholderFoto').classList.remove('hidden');
                 // Marcar todos os serviços por padrão
                 servicosGlobal.forEach(servico => {
                     const checkbox = document.getElementById(`servico_${servico.id}`);
@@ -918,6 +3206,50 @@
         function fecharModalBarbeiro() {
             document.getElementById('modalBarbeiro').classList.add('hidden');
             document.getElementById('formBarbeiro').reset();
+            // Resetar preview
+            document.getElementById('previewFotoBarbeiro').classList.add('hidden');
+            document.getElementById('placeholderFoto').classList.remove('hidden');
+        }
+
+        function previewFoto(input) {
+            const file = input.files[0];
+            if (file) {
+                // Validar tamanho (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('Arquivo muito grande! Máximo 5MB', 'error');
+                    input.value = '';
+                    return;
+                }
+                
+                // Validar tipo
+                if (!file.type.startsWith('image/')) {
+                    showToast('Selecione apenas imagens', 'error');
+                    input.value = '';
+                    return;
+                }
+                
+                // Criar preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewFotoBarbeiro').src = e.target.result;
+                    document.getElementById('previewFotoBarbeiro').classList.remove('hidden');
+                    document.getElementById('placeholderFoto').classList.add('hidden');
+                    // Limpar URL se houver
+                    document.getElementById('barbeiroFoto').value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewFotoUrl(input) {
+            const url = input.value.trim();
+            if (url) {
+                document.getElementById('previewFotoBarbeiro').src = url;
+                document.getElementById('previewFotoBarbeiro').classList.remove('hidden');
+                document.getElementById('placeholderFoto').classList.add('hidden');
+                // Limpar arquivo se houver
+                document.getElementById('barbeiroFotoUpload').value = '';
+            }
         }
 
         document.getElementById('formBarbeiro').addEventListener('submit', async (e) => {
@@ -932,9 +3264,39 @@
                 }
             });
             
+            const fotoUpload = document.getElementById('barbeiroFotoUpload').files[0];
+            const fotoUrl = document.getElementById('barbeiroFoto').value;
+            
+            let foto_final = fotoUrl || 'https://via.placeholder.com/150';
+            
+            // Se houver upload de arquivo, fazer upload primeiro
+            if (fotoUpload) {
+                const formData = new FormData();
+                formData.append('foto', fotoUpload);
+                
+                try {
+                    const uploadResponse = await fetch('/admin/upload-foto-barbeiro', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (uploadResponse.ok) {
+                        const uploadData = await uploadResponse.json();
+                        foto_final = uploadData.foto_url;
+                    } else {
+                        showToast('Erro ao fazer upload da foto', 'error');
+                        return;
+                    }
+                } catch (error) {
+                    showToast('Erro ao fazer upload da foto', 'error');
+                    console.error(error);
+                    return;
+                }
+            }
+            
             const dados = {
                 nome: document.getElementById('barbeiroNome').value,
-                foto_url: document.getElementById('barbeiroFoto').value || 'https://via.placeholder.com/150',
+                foto_url: foto_final,
                 ordem: parseInt(document.getElementById('barbeiroOrdem').value),
                 ativo: document.getElementById('barbeiroAtivo').checked,
                 servicos_ids: servicosSelecionados
@@ -951,16 +3313,16 @@
                 });
                 
                 if (response.ok) {
-                    alert(barbeiroId ? 'Barbeiro atualizado!' : 'Barbeiro criado!');
+                    showToast(barbeiroId ? 'Barbeiro atualizado!' : 'Barbeiro criado!', 'success');
                     fecharModalBarbeiro();
                     carregarBarbeiros();
                 } else {
                     const erro = await response.json();
-                    alert(erro.erro || 'Erro ao salvar barbeiro');
+                    showToast(erro.erro || 'Erro ao salvar barbeiro', 'error');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao salvar barbeiro');
+                showToast('Erro ao salvar barbeiro', 'error');
             }
         });
 
@@ -979,15 +3341,15 @@
                 });
                 
                 if (response.ok) {
-                    alert('Barbeiro deletado!');
+                    showToast('Barbeiro deletado!', 'success');
                     carregarBarbeiros();
                 } else {
                     const erro = await response.json();
-                    alert(erro.erro || 'Erro ao deletar barbeiro');
+                    showToast(erro.erro || 'Erro ao deletar barbeiro', 'error');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao deletar barbeiro');
+                showToast('Erro ao deletar barbeiro', 'error');
             }
         }
 
@@ -1039,7 +3401,7 @@
                 }
             } catch (error) {
                 console.error('Erro ao carregar serviços:', error);
-                alert('Erro ao carregar serviços');
+                showToast('Erro ao carregar serviços', 'error');
             }
         }
 
@@ -1101,16 +3463,16 @@
                 });
                 
                 if (response.ok) {
-                    alert(servicoId ? 'Serviço atualizado!' : 'Serviço criado!');
+                    showToast(servicoId ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
                     fecharModalServico();
                     carregarServicos();
                 } else {
                     const erro = await response.json();
-                    alert(erro.erro || 'Erro ao salvar serviço');
+                    showToast(erro.erro || 'Erro ao salvar serviço', 'error');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao salvar serviço');
+                showToast('Erro ao salvar serviço', 'error');
             }
         });
 
@@ -1129,15 +3491,15 @@
                 });
                 
                 if (response.ok) {
-                    alert('Serviço deletado!');
+                    showToast('Serviço deletado!', 'success');
                     carregarServicos();
                 } else {
                     const erro = await response.json();
-                    alert(erro.erro || 'Erro ao deletar serviço');
+                    showToast(erro.erro || 'Erro ao deletar serviço', 'error');
                 }
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao deletar serviço');
+                showToast('Erro ao deletar serviço', 'error');
             }
         }
     </script>
