@@ -1,5 +1,6 @@
 from flask import Flask, render_template, session, redirect, url_for, request
 from flask_cors import CORS
+from flask_compress import Compress
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
@@ -27,6 +28,22 @@ if os.getenv('DATABASE_URL') and 'postgresql' in os.getenv('DATABASE_URL', ''):
 from database import db
 db.init_app(app)
 CORS(app)
+
+# Compressão gzip para reduzir tamanho das respostas
+Compress(app)
+
+# Headers de cache para melhor performance
+@app.after_request
+def set_cache_headers(response):
+    # Cache estático (CSS, JS, imagens) por 7 dias
+    if response.content_type and any(x in response.content_type for x in ['text/css', 'application/javascript', 'image/', 'font/']):
+        response.cache_control.max_age = 604800  # 7 dias
+        response.cache_control.public = True
+    # HTML: cache por 1 hora
+    elif response.content_type and 'text/html' in response.content_type:
+        response.cache_control.max_age = 3600
+        response.cache_control.public = True
+    return response
 
 # Importar models e routes
 from models import Agendamento, ConfiguracaoBarbearia
