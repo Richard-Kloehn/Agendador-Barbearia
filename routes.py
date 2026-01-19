@@ -3,10 +3,16 @@ from datetime import datetime, timedelta, time
 from database import db
 from sqlalchemy.orm import joinedload
 from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro
-from services.whatsapp_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
 from werkzeug.utils import secure_filename
 import re
 import os
+
+# Importar cliente da API de WhatsApp (funciona em produção)
+try:
+    from services.whatsapp_api_client import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
+except ImportError:
+    # Fallback para automação local se API não disponível
+    from services.whatsapp_service_automation import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
 
 api_bp = Blueprint('api', __name__)
 admin_bp = Blueprint('admin', __name__)
@@ -331,12 +337,13 @@ def criar_agendamento():
     db.session.add(agendamento)
     db.session.commit()
     
-    # Enviar confirmação por WhatsApp apenas se telefone foi fornecido
+    # Enviar confirmação por WhatsApp se telefone foi fornecido
     if telefone_limpo:
         try:
             enviar_confirmacao_agendamento(agendamento)
         except Exception as e:
-            print(f"Erro ao enviar WhatsApp: {e}")
+            # Em produção sem Selenium, o erro é silencioso para não quebrar o agendamento
+            print(f"Aviso: Não foi possível enviar WhatsApp: {e}")
     
     return jsonify({
         'mensagem': 'Agendamento criado com sucesso!',
