@@ -1854,15 +1854,15 @@
                 for (const barbeiro of dataBarbeiros.barbeiros) {
                     const responseHorarios = await fetch(`/admin/horarios-barbeiro/${barbeiro.id}`);
                     const dataHorarios = await responseHorarios.json();
-                    
+
                     const card = document.createElement('div');
                     card.className = 'group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100';
-                    
+
                     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                     const diasCompletos = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
                     let horariosHTML = '';
                     let totalDias = 0;
-                    
+
                     if (dataHorarios.horarios && dataHorarios.horarios.length > 0) {
                         totalDias = dataHorarios.horarios.length;
                         dataHorarios.horarios.forEach(h => {
@@ -1897,9 +1897,10 @@
                             </div>
                         `;
                     }
-                    
+
                     const fotoUrl = barbeiro.foto_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(barbeiro.nome) + '&background=3b82f6&color=fff&size=128';
-                    
+
+                    // Garante que o botão sempre chama editarHorarioBarbeiro
                     card.innerHTML = `
                         <!-- Header com Gradiente -->
                         <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-4 relative">
@@ -1945,7 +1946,7 @@
                             </button>
                         </div>
                     `;
-                    
+
                     container.appendChild(card);
                 }
             } catch (error) {
