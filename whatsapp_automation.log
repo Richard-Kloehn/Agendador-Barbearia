@@ -2455,3 +2455,225 @@ with app.app_context(). See the documentation for more information.
 2026-01-18 22:30:28,202 - INFO -  * Detected change in 'd:\\Dados pessoais\\Desktop\\App Barbearia VS\\routes.py', reloading
 2026-01-18 22:30:28,347 - INFO -  * Restarting with stat
 2026-01-18 22:44:32,361 - INFO -  * Restarting with stat
+2026-01-20 19:08:00,125 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 20:07:59 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 19:08:00,619 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 20:08:00 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 19:12:45,849 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:45] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:12:46,389 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:46] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:12:47,257 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:47] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:12:47,259 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:47] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:12:47,876 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:47] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:12:48,188 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:48] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:12:48,917 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:48] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:12:48,918 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:48] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:12:50,104 - INFO - 127.0.0.1 - - [20/Jan/2026 19:12:50] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:13:59,405 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:13:59,767 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:13:59,772 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:13:59,789 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:13:59,791 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:13:59,802 - INFO - 127.0.0.1 - - [20/Jan/2026 19:13:59] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:14:01,075 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:01] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:14:01,089 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:01] "[36mGET /static/img/barbeiros/barbeiro_20260118_134145.png HTTP/1.1[0m" 304 -
+2026-01-20 19:14:01,090 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:01] "[36mGET /static/img/barbeiros/barbeiro_20260118_134155.png HTTP/1.1[0m" 304 -
+2026-01-20 19:14:09,903 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:09] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:14:10,712 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:14:10,722 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:14:10,731 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:14:10,768 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:14:10,793 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:14:10,804 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:10] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:14:11,715 - INFO - 127.0.0.1 - - [20/Jan/2026 19:14:11] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:16:31,492 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:16:31,767 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:16:31,780 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:16:31,786 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:16:31,793 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:31,803 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:31] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:36,246 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:36] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:36,257 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:36] "[36mGET /static/img/barbeiros/barbeiro_20260118_134145.png HTTP/1.1[0m" 304 -
+2026-01-20 19:16:36,266 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:36] "[36mGET /static/img/barbeiros/barbeiro_20260118_134155.png HTTP/1.1[0m" 304 -
+2026-01-20 19:16:40,355 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:40] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:16:42,361 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:42,370 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:16:42,379 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:16:42,413 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:16:42,421 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:16:42,434 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:42] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:16:43,343 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:43,346 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/agendamentos HTTP/1.1" 200 -
+2026-01-20 19:16:43,356 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:16:43,368 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:16:43,384 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:16:43,398 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:43] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:16:45,191 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:16:45,205 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:16:45,213 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:16:45,221 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:16:45,233 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:16:45,244 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:16:45,716 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:45] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:16:46,247 - INFO - 127.0.0.1 - - [20/Jan/2026 19:16:46] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:09,788 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:09] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:18:09,969 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:09] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:18:09,977 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:09] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:18:09,981 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:09] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:18:09,991 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:09] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:10,002 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:10] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:11,242 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:11] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:11,251 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:11] "[36mGET /static/img/barbeiros/barbeiro_20260118_134145.png HTTP/1.1[0m" 304 -
+2026-01-20 19:18:11,252 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:11] "[36mGET /static/img/barbeiros/barbeiro_20260118_134155.png HTTP/1.1[0m" 304 -
+2026-01-20 19:18:13,347 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:13] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:18:14,294 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:14,301 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:18:14,308 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:18:14,331 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:18:14,340 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:18:14,347 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:14] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:18:15,556 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:18:15,565 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/agendamentos HTTP/1.1" 200 -
+2026-01-20 19:18:15,570 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:18:15,582 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:18:15,590 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:18:15,604 - INFO - 127.0.0.1 - - [20/Jan/2026 19:18:15] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:19:01,010 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:19:01,024 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:19:01,034 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:19:01,045 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:19:01,056 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:19:01,063 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:19:01,638 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:01] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:19:02,334 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:19:02,343 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:19:02,351 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:19:02,359 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:19:02,367 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:19:02,374 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:02] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:19:03,538 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:03] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:19:04,410 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:04] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:19:09,757 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:09] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:19:12,083 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:12] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:19:12,983 - INFO - 127.0.0.1 - - [20/Jan/2026 19:19:12] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:20:39,404 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:20:39,638 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:20:39,648 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:20:39,651 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:39,661 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:20:39,667 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:39] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:42,413 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:42] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:42,422 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:42] "[36mGET /static/img/barbeiros/barbeiro_20260118_134145.png HTTP/1.1[0m" 304 -
+2026-01-20 19:20:42,424 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:42] "[36mGET /static/img/barbeiros/barbeiro_20260118_134155.png HTTP/1.1[0m" 304 -
+2026-01-20 19:20:48,280 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:48] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:20:49,520 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:49,528 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:20:49,539 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:20:49,562 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:20:49,572 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:20:49,581 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:49] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:20:51,309 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:51,318 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/agendamentos HTTP/1.1" 200 -
+2026-01-20 19:20:51,325 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:20:51,340 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:20:51,349 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:20:51,359 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:51] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:20:55,840 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:55] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:20:56,403 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:56] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:56,848 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:56] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:20:56,849 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:56] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:57,639 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:57] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:20:58,251 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:58] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:20:59,020 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:59] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:20:59,021 - INFO - 127.0.0.1 - - [20/Jan/2026 19:20:59] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:21:39,914 - INFO - 127.0.0.1 - - [20/Jan/2026 19:21:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:22:39,899 - INFO - 127.0.0.1 - - [20/Jan/2026 19:22:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:23:39,903 - INFO - 127.0.0.1 - - [20/Jan/2026 19:23:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:24:39,906 - INFO - 127.0.0.1 - - [20/Jan/2026 19:24:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:25:39,910 - INFO - 127.0.0.1 - - [20/Jan/2026 19:25:39] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:26:22,166 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:26:22,460 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:26:22,467 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:26:22,471 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:26:22,478 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:26:22,493 - INFO - 127.0.0.1 - - [20/Jan/2026 19:26:22] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:27:22,907 - INFO - 127.0.0.1 - - [20/Jan/2026 19:27:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:28:22,917 - INFO - 127.0.0.1 - - [20/Jan/2026 19:28:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:29:22,893 - INFO - 127.0.0.1 - - [20/Jan/2026 19:29:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:30:22,918 - INFO - 127.0.0.1 - - [20/Jan/2026 19:30:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:31:22,906 - INFO - 127.0.0.1 - - [20/Jan/2026 19:31:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:32:22,908 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:22] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:32:51,669 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:51] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:32:51,989 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:51] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:32:51,999 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:51] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:32:52,000 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:52] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:32:52,004 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:52] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:32:52,016 - INFO - 127.0.0.1 - - [20/Jan/2026 19:32:52] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:02,778 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:02] "GET /admin-dashboard HTTP/1.1" 200 -
+2026-01-20 19:33:02,982 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:02] "GET /admin/configuracao HTTP/1.1" 200 -
+2026-01-20 19:33:02,991 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:02] "GET /admin/agendamentos?data=2026-01-20&status=confirmado HTTP/1.1" 200 -
+2026-01-20 19:33:03,000 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:03] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:33:03,004 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:03] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:03,015 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:03] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:04,757 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:04] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:04,774 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:04] "[36mGET /static/img/barbeiros/barbeiro_20260118_134145.png HTTP/1.1[0m" 304 -
+2026-01-20 19:33:04,778 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:04] "[36mGET /static/img/barbeiros/barbeiro_20260118_134155.png HTTP/1.1[0m" 304 -
+2026-01-20 19:33:06,139 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:06] "GET /admin/servicos HTTP/1.1" 200 -
+2026-01-20 19:33:07,014 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:07,029 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/horarios-barbeiro/1 HTTP/1.1" 200 -
+2026-01-20 19:33:07,052 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/horarios-barbeiro/2 HTTP/1.1" 200 -
+2026-01-20 19:33:07,097 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/horarios-barbeiro/3 HTTP/1.1" 200 -
+2026-01-20 19:33:07,114 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/horarios-especiais HTTP/1.1" 200 -
+2026-01-20 19:33:07,121 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/dias-indisponiveis HTTP/1.1" 200 -
+2026-01-20 19:33:07,590 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/barbeiros HTTP/1.1" 200 -
+2026-01-20 19:33:07,605 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/agendamentos HTTP/1.1" 200 -
+2026-01-20 19:33:07,607 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:33:07,623 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:33:07,636 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:33:07,650 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:07] "GET /admin/agendamentos?status=concluido& HTTP/1.1" 200 -
+2026-01-20 19:33:08,277 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "GET / HTTP/1.1" 200 -
+2026-01-20 19:33:08,308 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "[36mGET /static/img/logo.png?v=3 HTTP/1.1[0m" 304 -
+2026-01-20 19:33:08,456 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "GET /api/datas-disponiveis HTTP/1.1" 200 -

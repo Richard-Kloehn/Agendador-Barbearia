@@ -224,7 +224,7 @@
                 </div>
             </header>
 
-            <div class="p-3 md:p-6 pb-24 md:pb-6">
+            <div class="pt-2 px-4 md:px-8 pb-24 md:pb-6">
                 <!-- Agendamentos Section -->
                 <section id="secao-agendamentos" class="secao">
                     <div class="bg-white rounded-xl shadow-lg p-4">
@@ -557,7 +557,7 @@
 
                 <!-- Barbeiros Section -->
                 <section id="secao-barbeiros" class="secao hidden">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 px-3 md:px-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-2 md:px-4 mt-[-22px]">
                         <h3 class="text-xl md:text-2xl font-bold text-gray-800">
                             <i class="fas fa-cut mr-2" style="color: #daa520;"></i>Gerenciar Barbeiros
                         </h3>
@@ -567,14 +567,14 @@
                     </div>
 
                     <!-- Lista de Barbeiros -->
-                    <div id="listaBarbeiros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
+                    <div id="listaBarbeiros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-0 mt-4">
                         <!-- Barbeiros serão inseridos aqui -->
                     </div>
                 </section>
 
                 <!-- Serviços Section -->
                 <section id="secao-servicos" class="secao hidden">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 px-3 md:px-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-2 md:px-4 mt-[-22px]">
                         <h3 class="text-xl md:text-2xl font-bold text-gray-800">
                             <i class="fas fa-scissors mr-2" style="color: #daa520;"></i>Gerenciar Serviços
                         </h3>
@@ -584,7 +584,7 @@
                     </div>
 
                     <!-- Lista de Serviços -->
-                    <div id="listaServicos" class="space-y-4 pb-24 md:pb-0">
+                    <div id="listaServicos" class="space-y-4 pb-24 md:pb-0 mt-4">
                         <!-- Serviços serão inseridos aqui -->
                     </div>
                 </section>
@@ -667,6 +667,7 @@
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     <option value="">Selecione um barbeiro</option>
                                 </select>
+                                <input type="hidden" id="hiddenBarbeiroId" />
                             </div>
                             
                             <!-- Formulário de Horários -->
@@ -1631,6 +1632,7 @@
             select.disabled = false;
             select.parentElement.style.display = 'block';
             select.value = '';
+            document.getElementById('hiddenBarbeiroId').value = '';
             
             // Restaurar título original
             const titulo = document.querySelector('#modalHorarioBarbeiro h3');
@@ -1728,7 +1730,11 @@
         }
         
         async function carregarHorariosBarbeiro() {
-            const barbeiroId = document.getElementById('selectBarbeiroHorario').value;
+            // Prioriza o hidden se existir valor, senão pega do select
+            let barbeiroId = document.getElementById('hiddenBarbeiroId').value;
+            if (!barbeiroId) {
+                barbeiroId = document.getElementById('selectBarbeiroHorario').value;
+            }
             const formDiv = document.getElementById('formHorariosBarbeiro');
             
             if (!barbeiroId) {
@@ -1769,8 +1775,11 @@
         }
         
         async function salvarHorariosBarbeiro() {
-            const barbeiroId = document.getElementById('selectBarbeiroHorario').value;
-            
+            // Prioriza o hidden se existir valor, senão pega do select
+            let barbeiroId = document.getElementById('hiddenBarbeiroId').value;
+            if (!barbeiroId) {
+                barbeiroId = document.getElementById('selectBarbeiroHorario').value;
+            }
             if (!barbeiroId) {
                 showToast('Selecione um barbeiro', 'warning');
                 return;
@@ -1965,6 +1974,8 @@
             select.value = barbeiroId;
             select.disabled = true;
             select.parentElement.style.display = 'none';
+            // Setar campo hidden
+            document.getElementById('hiddenBarbeiroId').value = barbeiroId;
             
             // Atualizar título do modal
             const titulo = document.querySelector('#modalHorarioBarbeiro h3');
