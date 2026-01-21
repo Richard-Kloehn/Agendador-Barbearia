@@ -42,15 +42,16 @@ class Barbeiro(db.Model):
     servicos = db.relationship('Servico', secondary='barbeiro_servico', backref='barbeiros')
     
     def to_dict(self):
+        servicos = self.servicos if self.servicos else []
         return {
             'id': self.id,
             'nome': self.nome,
             'foto_url': self.foto_url,
             'ativo': self.ativo,
             'ordem': self.ordem,
-            'servicos': [s.to_dict() for s in self.servicos],
-            'servicos_ids': [s.id for s in self.servicos],
-            'servicos_count': len(self.servicos)
+            'servicos': [s.to_dict() for s in servicos],
+            'servicos_ids': [s.id for s in servicos],
+            'servicos_count': len(servicos)
         }
 
 class Servico(db.Model):
