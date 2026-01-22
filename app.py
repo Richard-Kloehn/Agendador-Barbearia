@@ -56,32 +56,43 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 scheduler = BackgroundScheduler()
 
 def enviar_lembretes():
-    """Envia lembretes 24 horas antes dos agendamentos"""
-    from services.whatsapp_service import enviar_lembrete_whatsapp
+    """Envia lembretes 24 horas antes dos agendamentos via whapi.cloud"""
+    from services.whapi_service import enviar_lembrete_whatsapp
     
-    amanha = datetime.now() + timedelta(days=1)
-    inicio_dia = amanha.replace(hour=0, minute=0, second=0, microsecond=0)
-    fim_dia = amanha.replace(hour=23, minute=59, second=59, microsecond=999999)
-    
-    agendamentos = Agendamento.query.filter(
-        Agendamento.data_hora >= inicio_dia,
-        Agendamento.data_hora <= fim_dia,
-        Agendamento.lembrete_enviado == False,
-        Agendamento.status == 'confirmado',
-        Agendamento.telefone != ''  # Apenas agendamentos com telefone
-    ).all()
-    
-    for agendamento in agendamentos:
-        try:
-            enviar_lembrete_whatsapp(agendamento)
-            agendamento.lembrete_enviado = True
-            db.session.commit()
-        except Exception as e:
-            print(f"Erro ao enviar lembrete para {agendamento.nome_cliente}: {e}")
+    with app.app_context():
+        amanha = datetime.now() + timedelta(days=1)
+        inicio_dia = amanha.replace(hour=0, minute=0, second=0, microsecond=0)
+        fim_dia = amanha.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        agendamentos = Agendamento.query.filter(
+            Agendamento.data_hora >= inicio_dia,
+            Agendamento.data_hora <= fim_dia,
+            Agendamento.lembrete_enviado == False,
+            Agendamento.status == 'confirmado',
+            Agendamento.telefone != ''  # Apenas agendamentos com telefone
+        ).all()
+        
+        print(f"🔍 Verificando lembretes: {len(agendamentos)} agendamentos encontrados para amanhã")
+        
+        for agendamento in agendamentos:
+            try:
+                print(f"📤 Enviando lembrete para {agendamento.nome_cliente}...")
+                sucesso = enviar_lembrete_whatsapp(agendamento)
+                
+                if sucesso:
+                    agendamento.lembrete_enviado = True
+                    db.session.commit()
+                    print(f"✅ Lembrete enviado para {agendamento.nome_cliente}")
+                else:
+                    print(f"❌ Falha ao enviar lembrete para {agendamento.nome_cliente}")
+                    
+            except Exception as e:
+                print(f"❌ Erro ao enviar lembrete para {agendamento.nome_cliente}: {e}")
 
 # Agendar verificação a cada hora
 scheduler.add_job(func=enviar_lembretes, trigger="interval", hours=1)
 scheduler.start()
+print("✅ Scheduler de lembretes iniciado (verifica a cada 1 hora)")
 
 @app.route('/')
 def index():

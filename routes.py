@@ -9,12 +9,8 @@ import os
 from functools import lru_cache
 from sqlalchemy import and_, or_
 
-# Importar cliente da API de WhatsApp (funciona em produção)
-try:
-    from services.whatsapp_api_client import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
-except ImportError:
-    # Fallback para automação local se API não disponível
-    from services.whatsapp_service_automation import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
+# Importar serviço de WhatsApp com whapi.cloud (nova integração)
+from services.whapi_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
 
 api_bp = Blueprint('api', __name__)
 admin_bp = Blueprint('admin', __name__)
@@ -366,13 +362,8 @@ def criar_agendamento():
     db.session.add(agendamento)
     db.session.commit()
     
-    # Enviar confirmação por WhatsApp se telefone foi fornecido
-    if telefone_limpo:
-        try:
-            enviar_confirmacao_agendamento(agendamento)
-        except Exception as e:
-            # Em produção sem Selenium, o erro é silencioso para não quebrar o agendamento
-            print(f"Aviso: Não foi possível enviar WhatsApp: {e}")
+    # NÃO enviar confirmação imediata - apenas lembrete 24h antes via scheduler
+    # O lembrete será enviado automaticamente pelo sistema
     
     return jsonify({
         'mensagem': 'Agendamento criado com sucesso!',
