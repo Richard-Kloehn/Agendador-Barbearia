@@ -248,7 +248,7 @@
                                 </label>
                             </div>
                             <p class="text-xs text-gray-500 mt-2" id="infoWhatsApp">
-                                <i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes
+                                <i class="fas fa-info-circle"></i> Enviaremos lembrete 24h antes
                             </p>
                         </div>
                         
@@ -621,7 +621,7 @@
             if (semWhatsApp) {
                 infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Telefone obrigatório para contato. Você não receberá lembretes por WhatsApp';
             } else {
-                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes';
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Enviaremos lembrete 24h antes';
             }
         }
 
@@ -676,7 +676,7 @@
             } else {
                 resumoTelefoneDiv.style.display = 'flex';
                 document.getElementById('resumoTelefone').textContent = dadosAgendamento.telefone;
-                mensagemWhatsApp.textContent = 'Você receberá uma confirmação por WhatsApp e um lembrete 24 horas antes do seu horário.';
+                mensagemWhatsApp.textContent = 'Você receberá um lembrete no WhatsApp 24 horas antes do seu horário.';
                 infoWhatsAppStep3.classList.remove('bg-gray-50', 'border-gray-200');
                 infoWhatsAppStep3.classList.add('bg-yellow-50', 'border-yellow-200');
             }

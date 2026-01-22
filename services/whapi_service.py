@@ -20,7 +20,14 @@ class WhapiService:
         
     def esta_configurado(self) -> bool:
         """Verifica se a API está configurada"""
-        return bool(self.api_token)
+        configurado = bool(self.api_token)
+        if not configurado:
+            print("⚠️ WHAPI_API_TOKEN não configurado nas variáveis de ambiente")
+        else:
+            # Mostrar apenas primeiros e últimos caracteres do token para segurança
+            token_preview = f"{self.api_token[:8]}...{self.api_token[-4:]}" if len(self.api_token) > 12 else "***"
+            print(f"✅ WHAPI configurado (Token: {token_preview})")
+        return configurado
     
     def formatar_numero(self, numero: str) -> str:
         """
@@ -68,6 +75,10 @@ class WhapiService:
             # URL completa incluindo o channel ID
             url = f'{self.api_url}/messages/text'
             
+            print(f"🔄 Enviando para {numero_formatado}...")
+            print(f"   URL: {url}")
+            print(f"   Headers: Authorization Bearer {self.api_token[:8]}...")
+            
             response = requests.post(
                 url,
                 json=payload,
@@ -75,9 +86,12 @@ class WhapiService:
                 timeout=30
             )
             
+            print(f"📡 Resposta HTTP: {response.status_code}")
+            
             if response.status_code in [200, 201]:
                 result = response.json()
                 print(f"✅ WhatsApp enviado para {numero} via whapi.cloud")
+                print(f"   Número formatado: {numero_formatado}")
                 print(f"   ID da mensagem: {result.get('id', 'N/A')}")
                 return True
             else:

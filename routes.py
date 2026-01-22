@@ -362,13 +362,33 @@ def criar_agendamento():
     db.session.add(agendamento)
     db.session.commit()
     
-    # NÃO enviar confirmação imediata - apenas lembrete 24h antes via scheduler
-    # O lembrete será enviado automaticamente pelo sistema
+    # Verificar se o agendamento é para menos de 24 horas
+    # Se sim, enviar lembrete imediatamente
+    tempo_ate_agendamento = data_hora - datetime.now()
+    horas_ate_agendamento = tempo_ate_agendamento.total_seconds() / 3600
+    
+    lembrete_enviado = False
+    if horas_ate_agendamento < 24 and telefone_limpo:
+        # Agendamento com menos de 24h - enviar lembrete imediatamente
+        try:
+            print(f"⚡ Agendamento em menos de 24h - Enviando lembrete imediato para {agendamento.nome_cliente}")
+            lembrete_enviado = enviar_lembrete_whatsapp(agendamento)
+            if lembrete_enviado:
+                agendamento.lembrete_enviado = True
+                db.session.commit()
+                print(f"✅ Lembrete imediato enviado com sucesso")
+            else:
+                print(f"❌ Falha no envio do lembrete imediato")
+        except Exception as e:
+            print(f"❌ Erro ao enviar lembrete imediato: {e}")
+    else:
+        print(f"📅 Agendamento para mais de 24h - Lembrete será enviado automaticamente pelo scheduler")
     
     return jsonify({
         'mensagem': 'Agendamento criado com sucesso!',
         'agendamento': agendamento.to_dict(),
-        'cliente': cliente.to_dict() if cliente else None
+        'cliente': cliente.to_dict() if cliente else None,
+        'lembrete_enviado': lembrete_enviado
     }), 201
 
 @api_bp.route('/confirmar/<token>', methods=['POST'])

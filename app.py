@@ -9,19 +9,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///barbearia.db')
+
+# Corrigir DATABASE_URL do Render (postgres:// -> postgresql://)
+database_url = os.getenv('DATABASE_URL', 'sqlite:///barbearia.db')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['ADMIN_PASSWORD'] = '123'  # Senha do admin
 
 # Otimizações para produção
-if os.getenv('DATABASE_URL') and 'postgresql' in os.getenv('DATABASE_URL', ''):
-    # Pool de conexões otimizado para PostgreSQL
+if database_url and 'postgresql' in database_url:
+    # Pool de conexões otimizado para PostgreSQL + SSL
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 10,
-        'pool_recycle': 3600,
-        'pool_pre_ping': True,
-        'max_overflow': 5
+        'pool_size': 5,  # Reduzido para plano grátis
+        'pool_recycle': 1800,  # 30 minutos
+        'pool_pre_ping': True,  # Testa conexão antes de usar
+        'max_overflow': 2,  # Reduzido para plano grátis
+        'connect_args': {
+            'sslmode': 'require',  # Força SSL
+            'connect_timeout': 10  # Timeout de 10 segundos
+        }
     }
 
 # Inicializar banco
