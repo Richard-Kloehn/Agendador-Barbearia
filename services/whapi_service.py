@@ -137,24 +137,33 @@ class WhapiService:
         nome_barbeiro = agendamento.barbeiro.nome if agendamento.barbeiro else "um de nossos barbeiros"
         nome_servico = agendamento.servico.nome if agendamento.servico else "serviço"
         
+        # Nome da barbearia
+        try:
+            from models import ConfiguracaoBarbearia
+            config = ConfiguracaoBarbearia.query.first()
+            nome_barbearia = config.nome_barbearia if config and config.nome_barbearia else "Navalha's Barber Club"
+        except:
+            nome_barbearia = "Navalha's Barber Club"
+        
+        # URL do site para cancelamento
+        base_url = os.getenv('BASE_URL', 'http://localhost:5000')
+        
         # Criar mensagem personalizada
         mensagem = f"""{saudacao}, {agendamento.nome_cliente}! ✂️
 
-✅ *Agendamento Confirmado*
+✅ Confirmação de Agendamento
 
-📅 *Data:* {dia_semana}, {data_formatada}
-🕐 *Horário:* {hora_formatada}
-✂️ *Serviço:* {nome_servico}
-👤 *Profissional:* {nome_barbeiro}
+📅 Data: {dia_semana}, {data_formatada}
+🕐 Horário: {hora_formatada}
+✂️ Serviço: {nome_servico}
+👤 Barbeiro: {nome_barbeiro}
 
-📍 *Local:* Navalha's Barber Club
+❌ Caso precise cancelar, acesse o site e faça o cancelamento:
+{base_url}
 
-⚠️ *IMPORTANTE:*
-• Chegue com 5 minutos de antecedência
-• Em caso de imprevistos, avise com antecedência
-• Esta é uma mensagem automática
+⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
-Nos vemos em breve! 💈"""
+{nome_barbearia} aguarda você! 💈"""
         
         return self.enviar_mensagem(agendamento.telefone, mensagem)
     
@@ -211,15 +220,15 @@ Nos vemos em breve! 💈"""
 
 ✅ Confirmação de Agendamento
 
-📅 *Data:* {dia_semana}, {data_formatada}
-🕐 *Horário:* {hora_formatada}
-✂️ *Serviço:* {nome_servico}
-👤 *Barbeiro:* {nome_barbeiro}
+📅 Data: {dia_semana}, {data_formatada}
+🕐 Horário: {hora_formatada}
+✂️ Serviço: {nome_servico}
+👤 Barbeiro: {nome_barbeiro}
 
-❌ *Caso precise cancelar*, acesse o site e faça o cancelamento:
+❌ Caso precise cancelar, acesse o site e faça o cancelamento:
 {base_url}
 
-⚠️ *Importante:* Esta é uma mensagem automática. Não é necessário responder.
+⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
 {nome_barbearia} aguarda você! 💈"""
         
