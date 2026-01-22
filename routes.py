@@ -521,7 +521,12 @@ def listar_agendamentos():
     if status:
         query = query.filter_by(status=status)
     
-    agendamentos = query.order_by(Agendamento.data_hora.desc()).all()
+    # Eager loading para evitar N+1 queries (otimização de performance)
+    agendamentos = query.options(
+        joinedload(Agendamento.barbeiro),
+        joinedload(Agendamento.servico),
+        joinedload(Agendamento.cliente)
+    ).order_by(Agendamento.data_hora.desc()).all()
     
     return jsonify({
         'agendamentos': [a.to_dict() for a in agendamentos]
