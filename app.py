@@ -100,9 +100,22 @@ def inicializar_dados_basicos():
     with app.app_context():
         from models import Barbeiro, Servico, HorarioBarbeiro
         
+        print("="*60)
+        print("🔍 VERIFICANDO DADOS NO BANCO...")
+        print("="*60)
+        
+        # Contar registros existentes
+        total_barbeiros = Barbeiro.query.count()
+        total_servicos = Servico.query.count()
+        total_horarios = HorarioBarbeiro.query.count()
+        
+        print(f"📊 Barbeiros: {total_barbeiros}")
+        print(f"📊 Serviços: {total_servicos}")
+        print(f"📊 Horários: {total_horarios}")
+        
         # 1. CRIAR BARBEIROS
-        if Barbeiro.query.count() == 0:
-            print("📋 Criando barbeiros...")
+        if total_barbeiros == 0:
+            print("\n📋 Criando barbeiros...")
             barbeiros_data = [
                 {'nome': 'Bryan Victor Felippi', 'foto_url': '/static/img/barbeiro1.jpg', 'ordem': 1},
                 {'nome': 'Fabricio', 'foto_url': '/static/img/barbeiro2.jpg', 'ordem': 2},
@@ -120,10 +133,12 @@ def inicializar_dados_basicos():
             
             db.session.commit()
             print(f"✅ {len(barbeiros_data)} barbeiros criados!")
+        else:
+            print(f"\n✅ Barbeiros já existem ({total_barbeiros})")
         
         # 2. CRIAR SERVIÇOS
-        if Servico.query.count() == 0:
-            print("✂️ Criando serviços...")
+        if total_servicos == 0:
+            print("\n✂️ Criando serviços...")
             servicos_data = [
                 {'nome': 'Corte de Cabelo', 'duracao': 30, 'preco': 45.00, 'ordem': 1},
                 {'nome': 'Barba', 'duracao': 20, 'preco': 30.00, 'ordem': 2},
@@ -152,53 +167,72 @@ def inicializar_dados_basicos():
                 barbeiro.servicos = servicos
             db.session.commit()
             print("✅ Serviços associados aos barbeiros!")
+        else:
+            print(f"\n✅ Serviços já existem ({total_servicos})")
         
-        # 3. CRIAR HORÁRIOS
-        if HorarioBarbeiro.query.count() == 0:
-            barbeiros = Barbeiro.query.all()
-            
-            if not barbeiros:
-                print("⚠️ Nenhum barbeiro cadastrado para criar horários")
-                return
-            
-            print(f"🕐 Criando horários para {len(barbeiros)} barbeiro(s)...")
-            
-            # Horários padrão
-            horarios_padrao = [
-                {'dia_semana': 1, 'horario_inicio': '09:00', 'horario_fim': '18:00', 
-                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                {'dia_semana': 2, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                {'dia_semana': 3, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                {'dia_semana': 4, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                {'dia_semana': 5, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                {'dia_semana': 6, 'horario_inicio': '09:00', 'horario_fim': '17:00',
-                 'intervalo_almoco_inicio': None, 'intervalo_almoco_fim': None}
-            ]
-            
+        # 3. CRIAR HORÁRIOS (sempre que tiver barbeiros sem horários)
+        barbeiros = Barbeiro.query.all()
+        
+        if not barbeiros:
+            print("\n⚠️ Nenhum barbeiro cadastrado para criar horários")
+        else:
+            # Verificar se TODOS os barbeiros têm horários
+            barbeiros_sem_horarios = []
             for barbeiro in barbeiros:
-                for horario_data in horarios_padrao:
-                    horario = HorarioBarbeiro(
-                        barbeiro_id=barbeiro.id,
-                        dia_semana=horario_data['dia_semana'],
-                        horario_inicio=horario_data['horario_inicio'],
-                        horario_fim=horario_data['horario_fim'],
-                        intervalo_almoco_inicio=horario_data['intervalo_almoco_inicio'],
-                        intervalo_almoco_fim=horario_data['intervalo_almoco_fim'],
-                        ativo=True
-                    )
-                    db.session.add(horario)
+                horarios_barbeiro = HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro.id).count()
+                if horarios_barbeiro == 0:
+                    barbeiros_sem_horarios.append(barbeiro)
             
-            db.session.commit()
-            print(f"✅ {len(barbeiros) * len(horarios_padrao)} horários criados!")
+            if barbeiros_sem_horarios:
+                print(f"\n🕐 Criando horários para {len(barbeiros_sem_horarios)} barbeiro(s) sem horários...")
+                
+                # Horários padrão
+                horarios_padrao = [
+                    {'dia_semana': 1, 'horario_inicio': '09:00', 'horario_fim': '18:00', 
+                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                    {'dia_semana': 2, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                    {'dia_semana': 3, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                    {'dia_semana': 4, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                    {'dia_semana': 5, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                    {'dia_semana': 6, 'horario_inicio': '09:00', 'horario_fim': '17:00',
+                     'intervalo_almoco_inicio': None, 'intervalo_almoco_fim': None}
+                ]
+                
+                for barbeiro in barbeiros_sem_horarios:
+                    print(f"   Criando horários para: {barbeiro.nome}")
+                    for horario_data in horarios_padrao:
+                        horario = HorarioBarbeiro(
+                            barbeiro_id=barbeiro.id,
+                            dia_semana=horario_data['dia_semana'],
+                            horario_inicio=horario_data['horario_inicio'],
+                            horario_fim=horario_data['horario_fim'],
+                            intervalo_almoco_inicio=horario_data['intervalo_almoco_inicio'],
+                            intervalo_almoco_fim=horario_data['intervalo_almoco_fim'],
+                            ativo=True
+                        )
+                        db.session.add(horario)
+                
+                db.session.commit()
+                total_criados = len(barbeiros_sem_horarios) * len(horarios_padrao)
+                print(f"✅ {total_criados} horários criados!")
+            else:
+                print(f"\n✅ Todos os barbeiros já têm horários ({total_horarios} total)")
         
-        print("✅ Inicialização completa!")
+        print("="*60)
+        print("✅ Verificação completa!")
+        print("="*60)
 
 # Inicializar dados na primeira execução
-inicializar_dados_basicos()
+try:
+    inicializar_dados_basicos()
+except Exception as e:
+    print(f"❌ Erro ao inicializar dados: {e}")
+    import traceback
+    traceback.print_exc()
 
 @app.route('/')
 def index():
