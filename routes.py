@@ -362,8 +362,29 @@ def criar_agendamento():
     db.session.add(agendamento)
     db.session.commit()
     
-    # NÃO enviar confirmação imediata - apenas lembrete 24h antes via scheduler
-    # O lembrete será enviado automaticamente pelo sistema
+    # Verificar se agendamento é em menos de 24 horas
+    from datetime import datetime, timedelta
+    agora = datetime.now()
+    diferenca = data_hora - agora
+    
+    # Se for em menos de 24 horas E tiver telefone, enviar lembrete imediatamente
+    if diferenca < timedelta(hours=24) and telefone_limpo:
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"⚡ Agendamento em menos de 24h - enviando lembrete imediato")
+            logger.info(f"   Cliente: {agendamento.nome_cliente}")
+            logger.info(f"   Horário: {data_hora.strftime('%d/%m/%Y %H:%M')}")
+            
+            sucesso = enviar_lembrete_whatsapp(agendamento)
+            if sucesso:
+                agendamento.lembrete_enviado = True
+                db.session.commit()
+                logger.info(f"✅ Lembrete imediato enviado com sucesso")
+            else:
+                logger.error(f"❌ Falha ao enviar lembrete imediato")
+        except Exception as e:
+            logger.error(f"❌ Erro ao enviar lembrete imediato: {e}")
     
     return jsonify({
         'mensagem': 'Agendamento criado com sucesso!',
