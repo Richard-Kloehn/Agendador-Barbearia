@@ -739,85 +739,101 @@ def deletar_horario_especial(id):
 @api_bp.route('/barbeiros', methods=['GET'])
 def listar_barbeiros():
     """Lista barbeiros ativos e disponíveis para uma data específica"""
-    data_str = request.args.get('data')
-    
-    # Se não tiver data, retorna todos os barbeiros ativos com eager loading
-    if not data_str:
+    try:
+        data_str = request.args.get('data')
+        
+        # Se não tiver data, retorna todos os barbeiros ativos com eager loading
+        if not data_str:
+            barbeiros = Barbeiro.query.options(joinedload(Barbeiro.servicos))\
+                .filter_by(ativo=True)\
+                .order_by(Barbeiro.ordem)\
+                .all()
+            return jsonify({
+                'barbeiros': [b.to_dict() for b in barbeiros]
+            })
+        
+        # Converter string para objeto date
+        try:
+            data = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except ValueError:
+            print(f"❌ Formato de data inválido: {data_str}")
+            return jsonify({'erro': 'Formato de data inválido'}), 400
+        
+        # Verificar se a data está disponível (não está bloqueada)
+        dia_indisponivel = DiaIndisponivel.query.filter_by(data=data).first()
+        if dia_indisponivel:
+            # Data bloqueada - sem barbeiros disponíveis
+            return jsonify({'barbeiros': []})
+        
+        # Buscar todos os barbeiros ativos com eager loading
         barbeiros = Barbeiro.query.options(joinedload(Barbeiro.servicos))\
             .filter_by(ativo=True)\
             .order_by(Barbeiro.ordem)\
             .all()
+        
+        # Filtrar barbeiros que trabalham neste dia da semana
+        # Python weekday: 0=segunda, 1=terça, ..., 6=domingo
+        # Banco de dados: 0=domingo, 1=segunda, ..., 6=sábado
+        dia_semana_python = data.weekday()  # 0=segunda-feira, 6=domingo
+        
+        # Converter para formato do banco (0=domingo, 1=segunda, ..., 6=sábado)
+        if dia_semana_python == 6:  # domingo
+            dia_semana_db = 0
+        else:
+            dia_semana_db = dia_semana_python + 1
+        
+        print(f"🔍 Buscando barbeiros para {data_str} (dia da semana DB: {dia_semana_db})")
+        
+        # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
+        horarios_especiais = HorarioEspecial.query.filter(
+            HorarioEspecial.data == data
+        ).all()
+        
+        horarios_barbeiros = HorarioBarbeiro.query.filter(
+            HorarioBarbeiro.dia_semana == dia_semana_db,
+            HorarioBarbeiro.ativo == True
+        ).all()
+        
+        print(f"   Horários encontrados: {len(horarios_barbeiros)}")
+        
+        # Criar dicts para busca O(1)
+        especiais_por_barbeiro = {h.barbeiro_id: h for h in horarios_especiais if h.barbeiro_id}
+        especial_geral = next((h for h in horarios_especiais if h.barbeiro_id is None), None)
+        horarios_dict = {h.barbeiro_id: h for h in horarios_barbeiros}
+        
+        barbeiros_disponiveis = []
+        
+        for barbeiro in barbeiros:
+            # Verificações rápidas (dicts/set lookups)
+            if barbeiro.id in especiais_por_barbeiro:
+                # Barbeiro tem horário especial - está disponível
+                barbeiros_disponiveis.append(barbeiro)
+            elif especial_geral:
+                # Tem horário especial geral - barbeiro está disponível
+                barbeiros_disponiveis.append(barbeiro)
+            elif barbeiro.id in horarios_dict:
+                # Barbeiro trabalha neste dia
+                barbeiros_disponiveis.append(barbeiro)
+        
+        print(f"   Barbeiros disponíveis: {len(barbeiros_disponiveis)}")
+        
+        # Se não encontrou nenhum barbeiro, logar para debug
+        if not barbeiros_disponiveis:
+            print(f"⚠️ Nenhum barbeiro disponível para {data_str}")
+            print(f"   Total de barbeiros ativos: {len(barbeiros)}")
+            print(f"   Horários cadastrados para dia {dia_semana_db}: {len(horarios_barbeiros)}")
+            for h in horarios_barbeiros:
+                print(f"      - Barbeiro ID {h.barbeiro_id}: {h.horario_inicio}-{h.horario_fim}")
+        
         return jsonify({
-            'barbeiros': [b.to_dict() for b in barbeiros]
+            'barbeiros': [b.to_dict() for b in barbeiros_disponiveis]
         })
-    
-    # Converter string para objeto date
-    try:
-        data = datetime.strptime(data_str, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'erro': 'Formato de data inválido'}), 400
-    
-    # Verificar se a data está disponível (não está bloqueada)
-    dia_indisponivel = DiaIndisponivel.query.filter_by(data=data).first()
-    if dia_indisponivel:
-        # Data bloqueada - sem barbeiros disponíveis
-        return jsonify({'barbeiros': []})
-    
-    # Buscar todos os barbeiros ativos com eager loading
-    barbeiros = Barbeiro.query.options(joinedload(Barbeiro.servicos))\
-        .filter_by(ativo=True)\
-        .order_by(Barbeiro.ordem)\
-        .all()
-    
-    # Filtrar barbeiros que trabalham neste dia da semana
-    # Python weekday: 0=segunda, 1=terça, ..., 6=domingo
-    # Banco de dados: 0=domingo, 1=segunda, ..., 6=sábado
-    dia_semana_python = data.weekday()  # 0=segunda-feira, 6=domingo
-    
-    # Converter para formato do banco (0=domingo, 1=segunda, ..., 6=sábado)
-    if dia_semana_python == 6:  # domingo
-        dia_semana_db = 0
-    else:
-        dia_semana_db = dia_semana_python + 1
-    
-    # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
-    horarios_especiais = HorarioEspecial.query.filter(
-        HorarioEspecial.data == data
-    ).all()
-    
-    horarios_barbeiros = HorarioBarbeiro.query.filter(
-        HorarioBarbeiro.dia_semana == dia_semana_db,
-        HorarioBarbeiro.ativo == True
-    ).all()
-    
-    # Criar dicts para busca O(1)
-    especiais_por_barbeiro = {h.barbeiro_id: h for h in horarios_especiais if h.barbeiro_id}
-    especial_geral = next((h for h in horarios_especiais if h.barbeiro_id is None), None)
-    horarios_dict = {h.barbeiro_id: h for h in horarios_barbeiros}
-    
-    barbeiros_disponiveis = []
-    
-    for barbeiro in barbeiros:
-        # Verificações rápidas (dicts/set lookups)
-        if barbeiro.id in especiais_por_barbeiro:
-            # Barbeiro tem horário especial - está disponível
-            barbeiros_disponiveis.append(barbeiro)
-        elif especial_geral:
-            # Tem horário especial geral - barbeiro está disponível
-            barbeiros_disponiveis.append(barbeiro)
-        elif barbeiro.id in horarios_dict:
-            # Barbeiro trabalha neste dia
-            barbeiros_disponiveis.append(barbeiro)
-    
-    # Se não encontrou nenhum barbeiro, logar para debug
-    if not barbeiros_disponiveis:
-        print(f"⚠️ Nenhum barbeiro disponível para {data_str} (dia da semana DB: {dia_semana_db})")
-        print(f"   Total de barbeiros ativos: {len(barbeiros)}")
-        print(f"   Horários cadastrados para dia {dia_semana_db}: {len(horarios_barbeiros)}")
-    
-    return jsonify({
-        'barbeiros': [b.to_dict() for b in barbeiros_disponiveis]
-    })
+        
+    except Exception as e:
+        print(f"❌ ERRO ao listar barbeiros: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'erro': str(e)}), 500
 
 @api_bp.route('/barbeiro/<int:barbeiro_id>/horarios', methods=['GET'])
 def get_horarios_barbeiro(barbeiro_id):
