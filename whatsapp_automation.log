@@ -2677,3 +2677,128 @@ with app.app_context(). See the documentation for more information.
 2026-01-20 19:33:08,277 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "GET / HTTP/1.1" 200 -
 2026-01-20 19:33:08,308 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "[36mGET /static/img/logo.png?v=3 HTTP/1.1[0m" 304 -
 2026-01-20 19:33:08,456 - INFO - 127.0.0.1 - - [20/Jan/2026 19:33:08] "GET /api/datas-disponiveis HTTP/1.1" 200 -
+2026-01-20 21:25:37,457 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 22:25:37 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 22:16:36,316 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 23:16:36 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 22:25:37,227 - INFO - Running job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 23:25:37 -03)" (scheduled at 2026-01-20 22:25:37.217655-03:00)
+2026-01-20 22:25:37,230 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 23:25:37 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 22:30:36,954 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 23:30:36 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 22:30:38,052 - ERROR - Job "enviar_lembretes (trigger: interval[1:00:00], next run at: 2026-01-20 23:30:37 -03)" raised an exception
+Traceback (most recent call last):
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\apscheduler\executors\base.py", line 125, in run_job
+    retval = job.func(*job.args, **job.kwargs)
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\app.py", line 66, in enviar_lembretes
+    agendamentos = Agendamento.query.filter(
+                   ^^^^^^^^^^^^^^^^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\model.py", line 23, in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+                 ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\orm\scoping.py", line 218, in __call__
+    sess = self.registry()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 634, in __call__
+    key = self.scopefunc()
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\flask_sqlalchemy\session.py", line 111, in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Dados pessoais\Desktop\App Barbearia VS\.venv\Lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-20 22:57:46,278 - INFO -  * Detected change in 'D:\\Dados pessoais\\Desktop\\App Barbearia VS\\models.py', reloading
+2026-01-20 22:57:46,279 - INFO -  * Detected change in 'D:\\Dados pessoais\\Desktop\\App Barbearia VS\\models.py', reloading
+2026-01-20 22:57:46,507 - INFO -  * Restarting with stat
+2026-01-20 22:57:46,519 - INFO -  * Restarting with stat

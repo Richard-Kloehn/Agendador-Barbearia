@@ -770,11 +770,15 @@ def listar_barbeiros():
         .all()
     
     # Filtrar barbeiros que trabalham neste dia da semana
-    dia_semana = data.weekday()  # 0=segunda, 6=domingo
-    if dia_semana == 6:  # domingo
+    # Python weekday: 0=segunda, 1=terça, ..., 6=domingo
+    # Banco de dados: 0=domingo, 1=segunda, ..., 6=sábado
+    dia_semana_python = data.weekday()  # 0=segunda-feira, 6=domingo
+    
+    # Converter para formato do banco (0=domingo, 1=segunda, ..., 6=sábado)
+    if dia_semana_python == 6:  # domingo
         dia_semana_db = 0
     else:
-        dia_semana_db = dia_semana + 1
+        dia_semana_db = dia_semana_python + 1
     
     # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
     horarios_especiais = HorarioEspecial.query.filter(
@@ -804,6 +808,12 @@ def listar_barbeiros():
         elif barbeiro.id in horarios_dict:
             # Barbeiro trabalha neste dia
             barbeiros_disponiveis.append(barbeiro)
+    
+    # Se não encontrou nenhum barbeiro, logar para debug
+    if not barbeiros_disponiveis:
+        print(f"⚠️ Nenhum barbeiro disponível para {data_str} (dia da semana DB: {dia_semana_db})")
+        print(f"   Total de barbeiros ativos: {len(barbeiros)}")
+        print(f"   Horários cadastrados para dia {dia_semana_db}: {len(horarios_barbeiros)}")
     
     return jsonify({
         'barbeiros': [b.to_dict() for b in barbeiros_disponiveis]
