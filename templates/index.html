@@ -370,7 +370,7 @@
                     <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6" id="infoWhatsAppStep3">
                         <p class="text-sm text-gray-800">
                             <i class="fas fa-info-circle mr-2 gold-text"></i>
-                            <span id="mensagemWhatsApp">Você receberá um lembrete no WhatsApp 24 horas antes do seu horário.</span>
+                            <span id="mensagemWhatsApp">Você receberá um lembrete no WhatsApp antes do seu horário.</span>
                         </p>
                     </div>
                     
@@ -390,7 +390,7 @@
                     <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 text-center">
                         <p class="text-lg text-gray-800 flex items-center justify-center gap-2">
                             <i class="fas fa-info-circle text-yellow-600"></i>
-                            Você receberá um lembrete no WhatsApp 24 horas antes do seu horário.
+                            Você receberá um lembrete no WhatsApp antes do seu horário.
                         </p>
                     </div>
                     <button onclick="novoAgendamento()" 
@@ -619,9 +619,9 @@
             const infoWhatsApp = document.getElementById('infoWhatsApp');
             
             if (semWhatsApp) {
-                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Telefone obrigatório para contato. Você não receberá lembretes por WhatsApp';
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Telefone obrigatório para contato. Você não receberá lembrete por WhatsApp';
             } else {
-                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Enviaremos confirmação e lembrete 24h antes';
+                infoWhatsApp.innerHTML = '<i class="fas fa-info-circle"></i> Você receberá um lembrete por WhatsApp antes do horário';
             }
         }
 
@@ -670,13 +670,13 @@
             
             if (dadosAgendamento.semWhatsApp) {
                 resumoTelefoneDiv.style.display = 'none';
-                mensagemWhatsApp.textContent = 'Você optou por não receber notificações por WhatsApp.';
+                mensagemWhatsApp.textContent = 'Você optou por não receber lembrete por WhatsApp.';
                 infoWhatsAppStep3.classList.remove('bg-yellow-50', 'border-yellow-200');
                 infoWhatsAppStep3.classList.add('bg-gray-50', 'border-gray-200');
             } else {
                 resumoTelefoneDiv.style.display = 'flex';
                 document.getElementById('resumoTelefone').textContent = dadosAgendamento.telefone;
-                mensagemWhatsApp.textContent = 'Você receberá uma confirmação por WhatsApp e um lembrete 24 horas antes do seu horário.';
+                mensagemWhatsApp.textContent = 'Você receberá um lembrete por WhatsApp antes do seu horário.';
                 infoWhatsAppStep3.classList.remove('bg-gray-50', 'border-gray-200');
                 infoWhatsAppStep3.classList.add('bg-yellow-50', 'border-yellow-200');
             }
