@@ -176,35 +176,35 @@ def inicializar_dados_basicos():
         if not barbeiros:
             print("\n⚠️ Nenhum barbeiro cadastrado para criar horários")
         else:
-            # Verificar se TODOS os barbeiros têm horários
-            barbeiros_sem_horarios = []
-            for barbeiro in barbeiros:
-                horarios_barbeiro = HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro.id).count()
-                if horarios_barbeiro == 0:
-                    barbeiros_sem_horarios.append(barbeiro)
+            # Horários padrão esperados
+            horarios_padrao = [
+                {'dia_semana': 1, 'horario_inicio': '09:00', 'horario_fim': '18:00', 
+                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                {'dia_semana': 2, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                {'dia_semana': 3, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                {'dia_semana': 4, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                {'dia_semana': 5, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+                 'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+                {'dia_semana': 6, 'horario_inicio': '09:00', 'horario_fim': '17:00',
+                 'intervalo_almoco_inicio': None, 'intervalo_almoco_fim': None}
+            ]
             
-            if barbeiros_sem_horarios:
-                print(f"\n🕐 Criando horários para {len(barbeiros_sem_horarios)} barbeiro(s) sem horários...")
+            # Verificar horários faltantes para cada barbeiro
+            total_criados = 0
+            for barbeiro in barbeiros:
+                # Buscar quais dias já têm horários
+                horarios_existentes = HorarioBarbeiro.query.filter_by(barbeiro_id=barbeiro.id).all()
+                dias_existentes = {h.dia_semana for h in horarios_existentes}
                 
-                # Horários padrão
-                horarios_padrao = [
-                    {'dia_semana': 1, 'horario_inicio': '09:00', 'horario_fim': '18:00', 
-                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                    {'dia_semana': 2, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                    {'dia_semana': 3, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                    {'dia_semana': 4, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                    {'dia_semana': 5, 'horario_inicio': '09:00', 'horario_fim': '18:00',
-                     'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
-                    {'dia_semana': 6, 'horario_inicio': '09:00', 'horario_fim': '17:00',
-                     'intervalo_almoco_inicio': None, 'intervalo_almoco_fim': None}
-                ]
+                # Criar apenas os horários faltantes
+                horarios_faltantes = [h for h in horarios_padrao if h['dia_semana'] not in dias_existentes]
                 
-                for barbeiro in barbeiros_sem_horarios:
-                    print(f"   Criando horários para: {barbeiro.nome}")
-                    for horario_data in horarios_padrao:
+                if horarios_faltantes:
+                    print(f"\n   Criando {len(horarios_faltantes)} horário(s) faltante(s) para: {barbeiro.nome}")
+                    for horario_data in horarios_faltantes:
                         horario = HorarioBarbeiro(
                             barbeiro_id=barbeiro.id,
                             dia_semana=horario_data['dia_semana'],
@@ -215,12 +215,13 @@ def inicializar_dados_basicos():
                             ativo=True
                         )
                         db.session.add(horario)
-                
+                        total_criados += 1
+            
+            if total_criados > 0:
                 db.session.commit()
-                total_criados = len(barbeiros_sem_horarios) * len(horarios_padrao)
-                print(f"✅ {total_criados} horários criados!")
+                print(f"\n✅ {total_criados} horário(s) criado(s)!")
             else:
-                print(f"\n✅ Todos os barbeiros já têm horários ({total_horarios} total)")
+                print(f"\n✅ Todos os barbeiros já têm horários completos ({total_horarios} total)")
         
         print("="*60)
         print("✅ Verificação completa!")
