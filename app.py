@@ -94,6 +94,61 @@ scheduler.add_job(func=enviar_lembretes, trigger="interval", hours=1)
 scheduler.start()
 print("✅ Scheduler de lembretes iniciado (verifica a cada 1 hora)")
 
+# Função para popular horários automaticamente
+def popular_horarios_automaticamente():
+    """Popula horários dos barbeiros se não existirem"""
+    with app.app_context():
+        from models import Barbeiro, HorarioBarbeiro
+        
+        # Verificar se já existem horários
+        total_horarios = HorarioBarbeiro.query.count()
+        if total_horarios > 0:
+            print(f"✅ Horários já cadastrados ({total_horarios} registros)")
+            return
+        
+        # Buscar barbeiros
+        barbeiros = Barbeiro.query.all()
+        if not barbeiros:
+            print("⚠️ Nenhum barbeiro cadastrado")
+            return
+        
+        print(f"📋 Populando horários para {len(barbeiros)} barbeiro(s)...")
+        
+        # Horários padrão
+        horarios_padrao = [
+            {'dia_semana': 1, 'horario_inicio': '09:00', 'horario_fim': '18:00', 
+             'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+            {'dia_semana': 2, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+             'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+            {'dia_semana': 3, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+             'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+            {'dia_semana': 4, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+             'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+            {'dia_semana': 5, 'horario_inicio': '09:00', 'horario_fim': '18:00',
+             'intervalo_almoco_inicio': '12:00', 'intervalo_almoco_fim': '13:00'},
+            {'dia_semana': 6, 'horario_inicio': '09:00', 'horario_fim': '17:00',
+             'intervalo_almoco_inicio': None, 'intervalo_almoco_fim': None}
+        ]
+        
+        for barbeiro in barbeiros:
+            for horario_data in horarios_padrao:
+                horario = HorarioBarbeiro(
+                    barbeiro_id=barbeiro.id,
+                    dia_semana=horario_data['dia_semana'],
+                    horario_inicio=horario_data['horario_inicio'],
+                    horario_fim=horario_data['horario_fim'],
+                    intervalo_almoco_inicio=horario_data['intervalo_almoco_inicio'],
+                    intervalo_almoco_fim=horario_data['intervalo_almoco_fim'],
+                    ativo=True
+                )
+                db.session.add(horario)
+        
+        db.session.commit()
+        print(f"✅ {len(barbeiros) * len(horarios_padrao)} horários criados com sucesso!")
+
+# Popular horários na inicialização
+popular_horarios_automaticamente()
+
 @app.route('/')
 def index():
     return render_template('index.html')
