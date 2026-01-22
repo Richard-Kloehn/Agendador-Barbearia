@@ -7,8 +7,16 @@ Documentação: https://whapi.cloud/pt/docs
 
 import requests
 import os
+import logging
 from datetime import datetime
 from typing import Optional
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [WHAPI] %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class WhapiService:
     """Cliente para integração com whapi.cloud"""
@@ -16,11 +24,22 @@ class WhapiService:
     def __init__(self):
         self.api_url = os.getenv('WHAPI_API_URL', 'https://gate.whapi.cloud')
         self.api_token = os.getenv('WHAPI_API_TOKEN', '')
+        
+        # Log de inicialização
+        if self.esta_configurado():
+            logger.info(f"✅ Whapi Service inicializado - URL: {self.api_url}")
+            logger.info(f"   Token configurado: {'Sim' if self.api_token else 'Não'}")
+        else:
+            logger.warning("⚠️ Whapi Service NÃO CONFIGURADO - defina WHAPI_API_TOKEN")
+        
         # Channel ID não é mais necessário - o token já identifica o canal
         
     def esta_configurado(self) -> bool:
         """Verifica se a API está configurada"""
-        return bool(self.api_token)
+        configurado = bool(self.api_token and len(self.api_token) > 10)
+        if not configurado:
+            logger.error("❌ WHAPI_API_TOKEN não está configurado ou é inválido")
+        return configurado
     
     def formatar_numero(self, numero: str) -> str:
         """
@@ -48,11 +67,13 @@ class WhapiService:
             bool: True se enviado com sucesso
         """
         if not self.esta_configurado():
-            print("⚠️ whapi.cloud não configurado (defina WHAPI_API_TOKEN)")
+            logger.error("⚠️ whapi.cloud não configurado - mensagem NÃO será enviada")
+            logger.error("   Configure a variável de ambiente WHAPI_API_TOKEN")
             return False
         
         try:
             numero_formatado = self.formatar_numero(numero)
+            logger.info(f"📤 Tentando enviar mensagem para {numero} (formatado: {numero_formatado})")
             
             headers = {
                 'Authorization': f'Bearer {self.api_token}',
@@ -67,6 +88,7 @@ class WhapiService:
             
             # URL completa incluindo o channel ID
             url = f'{self.api_url}/messages/text'
+            logger.info(f"   URL: {url}")
             
             response = requests.post(
                 url,
@@ -77,28 +99,35 @@ class WhapiService:
             
             if response.status_code in [200, 201]:
                 result = response.json()
-                print(f"✅ WhatsApp enviado para {numero} via whapi.cloud")
-                print(f"   ID da mensagem: {result.get('id', 'N/A')}")
+                message_id = result.get('id', 'N/A')
+                logger.info(f"✅ WhatsApp enviado com sucesso para {numero}")
+                logger.info(f"   ID da mensagem: {message_id}")
                 return True
             else:
                 # Tentar obter mais detalhes do erro
                 try:
                     error_data = response.json()
                     error_msg = error_data.get('message', error_data.get('error', 'Erro desconhecido'))
-                    print(f"❌ Erro whapi.cloud ({response.status_code}): {error_msg}")
-                    print(f"   Resposta completa: {error_data}")
+                    logger.error(f"❌ Erro whapi.cloud (Status {response.status_code})")
+                    logger.error(f"   Mensagem: {error_msg}")
+                    logger.error(f"   Resposta completa: {error_data}")
                 except:
-                    print(f"❌ Erro whapi.cloud ({response.status_code}): {response.text}")
+                    logger.error(f"❌ Erro whapi.cloud (Status {response.status_code})")
+                    logger.error(f"   Resposta: {response.text}")
                 return False
                 
         except requests.exceptions.Timeout:
-            print(f"⏱️ Timeout ao enviar WhatsApp para {numero}")
+            logger.error(f"⏱️ Timeout ao enviar WhatsApp para {numero}")
+            logger.error("   A API da Whapi demorou mais de 30 segundos para responder")
             return False
         except requests.exceptions.RequestException as e:
-            print(f"❌ Erro de conexão com whapi.cloud: {e}")
+            logger.error(f"❌ Erro de conexão com whapi.cloud: {e}")
+            logger.error("   Verifique sua conexão de internet e se o serviço está ativo")
             return False
         except Exception as e:
-            print(f"❌ Erro inesperado ao enviar WhatsApp: {e}")
+            logger.error(f"❌ Erro inesperado ao enviar WhatsApp: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
     
     def enviar_confirmacao_agendamento(self, agendamento) -> bool:
@@ -112,8 +141,10 @@ class WhapiService:
             bool: True se enviado com sucesso
         """
         if not agendamento.telefone:
-            print("⚠️ Agendamento sem telefone")
+            logger.warning(f"⚠️ Agendamento #{agendamento.id} sem telefone - não será enviado")
             return False
+        
+        logger.info(f"📋 Preparando confirmação de agendamento #{agendamento.id}")
         
         # Determinar saudação baseada no horário
         hora_atual = datetime.now().hour
@@ -179,8 +210,10 @@ class WhapiService:
             bool: True se enviado com sucesso
         """
         if not agendamento.telefone:
-            print("⚠️ Agendamento sem telefone")
+            logger.warning(f"⚠️ Agendamento #{agendamento.id} sem telefone - não será enviado lembrete")
             return False
+        
+        logger.info(f"⏰ Preparando lembrete 24h para agendamento #{agendamento.id}")
         
         # Determinar saudação baseada no horário
         hora_atual = datetime.now().hour
@@ -311,3 +344,4 @@ def enviar_lembrete_whatsapp(agendamento) -> bool:
 def enviar_lembrete_2h(agendamento) -> bool:
     """Envia lembrete 2 horas antes"""
     return _whapi_service.enviar_lembrete_2h(agendamento)
+
