@@ -89,6 +89,12 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
     else:
         duracao = timedelta(minutes=config.duracao_atendimento)
     
+    # Buscar a menor duração entre todos os serviços para definir o incremento
+    menor_duracao = db.session.query(db.func.min(Servico.duracao)).scalar()
+    if not menor_duracao:
+        menor_duracao = 15  # Padrão de 15 minutos
+    incremento = timedelta(minutes=menor_duracao)
+    
     # Gerar horários
     hora_atual = datetime.combine(data, hora_inicio)
     hora_final = datetime.combine(data, hora_fim)
@@ -121,13 +127,13 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
     while hora_atual < hora_final:
         # Se for hoje, ocultar horários que já passaram
         if data == agora.date() and hora_atual <= agora:
-            hora_atual += duracao
+            hora_atual += incremento  # Usar incremento dinâmico
             continue
         
         # Verificar se não está no horário de almoço
         if almoco_inicio and almoco_fim:
             if almoco_inicio <= hora_atual.time() < almoco_fim:
-                hora_atual += duracao
+                hora_atual += incremento  # Usar incremento dinâmico
                 continue
         
         # Verificar se horário já está agendado ou se conflita com algum agendamento existente
@@ -146,7 +152,7 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
         if not conflito:
             horarios.append(hora_atual.strftime('%H:%M'))
         
-        hora_atual += duracao
+        hora_atual += incremento  # Usar incremento dinâmico
     
     return horarios
 
