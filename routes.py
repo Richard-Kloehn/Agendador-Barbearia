@@ -478,11 +478,11 @@ def meus_agendamentos():
     # Buscar agendamentos futuros ou recentes (últimos 7 dias)
     data_limite = datetime.now() - timedelta(days=7)
     
-    # Buscar por telefone, excluindo cancelados
+    # Buscar por telefone, apenas agendamentos em aberto (pendente/confirmado)
     query = Agendamento.query.filter(
         Agendamento.telefone == telefone,
         Agendamento.data_hora >= data_limite,
-        Agendamento.status != 'cancelado'
+        Agendamento.status.in_(['pendente', 'confirmado'])
     )
     
     # Se nome foi fornecido, filtrar também por nome (case insensitive)
@@ -500,8 +500,11 @@ def cancelar_agendamento_cliente(id):
     """Permite cliente cancelar seu próprio agendamento"""
     agendamento = Agendamento.query.get_or_404(id)
     
-    # Verificar se agendamento já passou
-    if agendamento.data_hora < datetime.now():
+    # Verificar se agendamento já passou (usar timezone do Brasil)
+    tz_brasil = pytz.timezone('America/Sao_Paulo')
+    agora = datetime.now(tz_brasil).replace(tzinfo=None)
+    
+    if agendamento.data_hora < agora:
         return jsonify({'erro': 'Não é possível cancelar agendamentos passados'}), 400
     
     # Verificar se já está cancelado
