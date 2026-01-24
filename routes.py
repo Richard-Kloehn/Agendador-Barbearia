@@ -313,6 +313,16 @@ def criar_agendamento():
     if not dados.get('nome_cliente') or not dados.get('data_hora') or not dados.get('barbeiro_id') or not dados.get('servico_id'):
         return jsonify({'erro': 'Dados incompletos'}), 400
     
+    # Validar nome completo (mínimo 2 palavras)
+    nome_cliente = dados.get('nome_cliente', '').strip()
+    partes_nome = [p for p in nome_cliente.split() if len(p) > 0]
+    if len(partes_nome) < 2:
+        return jsonify({'erro': 'Por favor, informe seu nome completo (nome e sobrenome)'}), 400
+    
+    # Validar que cada parte do nome tem pelo menos 2 caracteres
+    if any(len(parte) < 2 for parte in partes_nome):
+        return jsonify({'erro': 'Por favor, informe um nome completo válido'}), 400
+    
     # Validar barbeiro e serviço
     barbeiro_id = dados.get('barbeiro_id')
     servico_id = dados.get('servico_id')
@@ -884,19 +894,40 @@ def listar_barbeiros():
         
         barbeiros_disponiveis = []
         
+        # Buscar configuração para durações
+        config = ConfiguracaoBarbearia.query.first()
+        if not config:
+            return jsonify({'erro': 'Configuração não encontrada'}), 500
+        
         for barbeiro in barbeiros:
             # Verificações rápidas (dicts/set lookups)
+            trabalha_neste_dia = False
+            
             if barbeiro.id in especiais_por_barbeiro:
-                # Barbeiro tem horário especial - está disponível
-                barbeiros_disponiveis.append(barbeiro)
+                # Barbeiro tem horário especial
+                trabalha_neste_dia = True
             elif especial_geral:
-                # Tem horário especial geral - barbeiro está disponível
-                barbeiros_disponiveis.append(barbeiro)
+                # Tem horário especial geral
+                trabalha_neste_dia = True
             elif barbeiro.id in horarios_dict:
                 # Barbeiro trabalha neste dia
-                barbeiros_disponiveis.append(barbeiro)
+                trabalha_neste_dia = True
+            
+            # Se o barbeiro trabalha neste dia, verificar se tem horários disponíveis
+            if trabalha_neste_dia:
+                # Verificar se há pelo menos 1 horário disponível para este barbeiro
+                # Usar a menor duração de serviço para verificar
+                menor_duracao = db.session.query(db.func.min(Servico.duracao)).scalar()
+                if not menor_duracao:
+                    menor_duracao = config.duracao_atendimento
+                
+                horarios_disponiveis = gerar_horarios_disponiveis(data, config, barbeiro.id, menor_duracao)
+                
+                # Só adicionar barbeiro se ele tiver pelo menos 1 horário disponível
+                if horarios_disponiveis:
+                    barbeiros_disponiveis.append(barbeiro)
         
-        print(f"   Barbeiros disponíveis: {len(barbeiros_disponiveis)}")
+        print(f"   Barbeiros com horários disponíveis: {len(barbeiros_disponiveis)}")
         
         # Se não encontrou nenhum barbeiro, logar para debug
         if not barbeiros_disponiveis:

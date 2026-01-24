@@ -225,7 +225,7 @@
                             </label>
                             <input type="text" id="nome" 
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
-                                placeholder="Digite seu nome"
+                                placeholder="Digite seu nome completo"
                                 autocomplete="off"
                                 oninput="buscarCliente()">
                             <!-- Dropdown de sugestões -->
@@ -635,6 +635,22 @@
                 return;
             }
             
+            // Validar nome completo (mínimo 2 palavras)
+            const partesNome = nome.split(/\s+/).filter(p => p.length > 0);
+            if (partesNome.length < 2) {
+                mostrarNotificacao('Por favor, digite seu nome completo (nome e sobrenome)', 'warning');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
+            // Validar que cada parte do nome tem pelo menos 2 caracteres
+            const nomeInvalido = partesNome.some(parte => parte.length < 2);
+            if (nomeInvalido) {
+                mostrarNotificacao('Por favor, digite um nome completo válido', 'warning');
+                document.getElementById('nome').focus();
+                return;
+            }
+            
             if (!telefone) {
                 mostrarNotificacao('Por favor, digite seu telefone para contato', 'warning');
                 return;
@@ -790,7 +806,21 @@
                     });
                     container.classList.remove('hidden');
                 } else {
-                    grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8"><i class="fas fa-user-slash text-4xl mb-2"></i><p>Nenhum barbeiro disponível</p></div>';
+                    // Nenhum barbeiro disponível na data selecionada
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 max-w-md mx-auto">
+                                <i class="fas fa-calendar-times text-6xl text-yellow-500 mb-4"></i>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Nenhum Barbeiro Disponível</h3>
+                                <p class="text-gray-600 mb-4">
+                                    Infelizmente, não há horários disponíveis para a data selecionada.
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Por favor, escolha outra data para ver os barbeiros disponíveis.
+                                </p>
+                            </div>
+                        </div>
+                    `;
                     container.classList.remove('hidden');
                 }
             } catch (error) {
