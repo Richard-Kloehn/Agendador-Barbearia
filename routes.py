@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, timezone
 from database import db
+import pytz
 from sqlalchemy.orm import joinedload
 from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro
 from werkzeug.utils import secure_filename
@@ -91,7 +92,9 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
     # Gerar horários
     hora_atual = datetime.combine(data, hora_inicio)
     hora_final = datetime.combine(data, hora_fim)
-    agora = datetime.now()
+    # Usar timezone do Brasil
+    tz_brasil = pytz.timezone('America/Sao_Paulo')
+    agora = datetime.now(tz_brasil).replace(tzinfo=None)
     
     # Pré-carregar agendamentos do barbeiro nesta data (uma única query em vez de muitas)
     agendamentos_dia = Agendamento.query.filter(
@@ -228,7 +231,10 @@ def get_dias_com_barbeiros_otimizado():
     global _cache_dias_com_barbeiros
     
     # Usar cache se foi atualizado há menos de 1 hora
-    agora = datetime.now()
+    # Usar timezone do Brasil
+    tz_brasil = pytz.timezone('America/Sao_Paulo')
+    agora = datetime.now(tz_brasil).replace(tzinfo=None)
+    
     if _cache_dias_com_barbeiros['data'] and (agora - _cache_dias_com_barbeiros['data']).total_seconds() < 3600:
         return _cache_dias_com_barbeiros['valor']
     
@@ -519,7 +525,10 @@ def listar_agendamentos():
     data_fim_str = request.args.get('data_fim')
     
     # Atualizar automaticamente agendamentos confirmados que já passaram do horário
-    agora = datetime.now()
+    # Usar timezone do Brasil
+    tz_brasil = pytz.timezone('America/Sao_Paulo')
+    agora = datetime.now(tz_brasil).replace(tzinfo=None)
+    
     agendamentos_passados = Agendamento.query.filter(
         Agendamento.status == 'confirmado',
         Agendamento.data_hora < agora
