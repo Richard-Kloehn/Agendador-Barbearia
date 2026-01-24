@@ -161,7 +161,7 @@ class WhapiService:
             nome_barbearia = "Navalha's Barber Club"
         
         # URL do site para cancelamento
-        base_url = os.getenv('BASE_URL', 'http://localhost:5000')
+        base_url = os.getenv('BASE_URL', 'https://agendador-barbearia.up.railway.app')
         
         # Criar mensagem personalizada
         mensagem = f"""{saudacao}, {agendamento.nome_cliente}! ✂️
@@ -228,7 +228,7 @@ class WhapiService:
             nome_barbearia = "Navalha's Barber Club"
         
         # URL do site para cancelamento
-        base_url = os.getenv('BASE_URL', 'https://web-production-37c4d.up.railway.app')
+        base_url = os.getenv('BASE_URL', 'https://agendador-barbearia.up.railway.app')
         
         # Criar mensagem (igual ao script selenium)
         mensagem = f"""{saudacao}, {agendamento.nome_cliente}! ✂️
