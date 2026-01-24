@@ -16,7 +16,7 @@ class WhapiService:
     def __init__(self):
         self.api_url = os.getenv('WHAPI_API_URL', 'https://gate.whapi.cloud')
         self.api_token = os.getenv('WHAPI_API_TOKEN', '')
-        # Channel ID não é mais necessário - o token já identifica o canal
+        self.channel_id = os.getenv('WHAPI_CHANNEL_ID', '')  # ID do canal (opcional)
         
     def esta_configurado(self) -> bool:
         """Verifica se a API está configurada"""
@@ -72,8 +72,11 @@ class WhapiService:
                 'body': mensagem
             }
             
-            # URL completa incluindo o channel ID
-            url = f'{self.api_url}/messages/text'
+            # Tentar com channel ID se disponível, senão usar endpoint padrão
+            if self.channel_id:
+                url = f'{self.api_url}/channels/{self.channel_id}/messages/text'
+            else:
+                url = f'{self.api_url}/messages/text'
             
             print(f"🔄 Enviando para {numero_formatado}...")
             print(f"   URL: {url}")
