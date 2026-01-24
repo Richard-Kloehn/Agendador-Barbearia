@@ -101,8 +101,19 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
         Agendamento.status.in_(['pendente', 'confirmado'])
     ).all()
     
-    # Criar set de horas ocupadas para busca O(1)
-    horas_ocupadas = {a.data_hora for a in agendamentos_dia}
+    # Criar set de horas ocupadas incluindo TODA a duração do serviço
+    horas_ocupadas = set()
+    for agendamento in agendamentos_dia:
+        # Pegar duração do serviço do agendamento
+        duracao_agendamento = timedelta(minutes=agendamento.servico.duracao if agendamento.servico else 30)
+        hora_inicio_agendamento = agendamento.data_hora
+        hora_fim_agendamento = hora_inicio_agendamento + duracao_agendamento
+        
+        # Marcar TODOS os slots de 30 em 30 min durante o agendamento
+        slot_atual = hora_inicio_agendamento
+        while slot_atual < hora_fim_agendamento:
+            horas_ocupadas.add(slot_atual)
+            slot_atual += timedelta(minutes=30)  # Intervalo de 30 min
     
     while hora_atual < hora_final:
         # Se for hoje, ocultar horários que já passaram
@@ -116,8 +127,20 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
                 hora_atual += duracao
                 continue
         
-        # Verificar se horário já está agendado (busca O(1) no set)
-        if hora_atual not in horas_ocupadas:
+        # Verificar se horário já está agendado ou se conflita com algum agendamento existente
+        # Precisamos verificar se o novo horário + duração do serviço não conflita
+        hora_fim_novo = hora_atual + duracao
+        conflito = False
+        
+        # Verificar se algum slot do novo agendamento está ocupado
+        slot_verificacao = hora_atual
+        while slot_verificacao < hora_fim_novo:
+            if slot_verificacao in horas_ocupadas:
+                conflito = True
+                break
+            slot_verificacao += timedelta(minutes=30)
+        
+        if not conflito:
             horarios.append(hora_atual.strftime('%H:%M'))
         
         hora_atual += duracao
@@ -311,15 +334,36 @@ def criar_agendamento():
     except ValueError:
         return jsonify({'erro': 'Formato de data/hora inválido'}), 400
     
-    # Verificar se horário já está ocupado PELO MESMO BARBEIRO
-    agendamento_existente = Agendamento.query.filter(
-        Agendamento.data_hora == data_hora,
-        Agendamento.barbeiro_id == barbeiro_id,
-        Agendamento.status.in_(['pendente', 'confirmado'])
-    ).first()
+    # Verificar conflitos de horário considerando a DURAÇÃO COMPLETA do serviço
+    # Novo agendamento: data_hora até data_hora + duração do serviço
+    hora_fim_novo = data_hora + timedelta(minutes=servico.duracao)
     
-    if agendamento_existente:
-        return jsonify({'erro': 'Horário não está mais disponível'}), 409
+    # Buscar TODOS os agendamentos do barbeiro neste dia
+    agendamentos_existentes = Agendamento.query.filter(
+        Agendamento.barbeiro_id == barbeiro_id,
+        Agendamento.status.in_(['pendente', 'confirmado']),
+        Agendamento.data_hora >= datetime.combine(data_hora.date(), time(0, 0)),
+        Agendamento.data_hora <= datetime.combine(data_hora.date(), time(23, 59))
+    ).all()
+    
+    # Verificar se o novo agendamento conflita com algum existente
+    for agendamento_existente in agendamentos_existentes:
+        hora_inicio_existente = agendamento_existente.data_hora
+        duracao_existente = agendamento_existente.servico.duracao if agendamento_existente.servico else 30
+        hora_fim_existente = hora_inicio_existente + timedelta(minutes=duracao_existente)
+        
+        # Conflito se:
+        # 1. Novo começa durante um agendamento existente
+        # 2. Novo termina durante um agendamento existente  
+        # 3. Novo engloba um agendamento existente
+        if (data_hora < hora_fim_existente and hora_fim_novo > hora_inicio_existente):
+            return jsonify({
+                'erro': 'Horário não está mais disponível. Conflita com outro agendamento.',
+                'conflito': {
+                    'horario_existente': hora_inicio_existente.strftime('%H:%M'),
+                    'duracao_existente': duracao_existente
+                }
+            }), 409
     
     telefone_limpo = re.sub(r'\D', '', telefone) if telefone else None
     
