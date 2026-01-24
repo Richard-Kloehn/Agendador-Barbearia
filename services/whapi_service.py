@@ -72,14 +72,12 @@ class WhapiService:
                 'body': mensagem
             }
             
-            # Tentar com channel ID se disponível, senão usar endpoint padrão
-            if self.channel_id:
-                url = f'{self.api_url}/channels/{self.channel_id}/messages/text'
-            else:
-                url = f'{self.api_url}/messages/text'
+            # Usar endpoint padrão (token identifica o canal automaticamente)
+            url = f'{self.api_url}/messages/text'
             
             print(f"🔄 Enviando para {numero_formatado}...")
             print(f"   URL: {url}")
+            print(f"   Channel ID configurado: {bool(self.channel_id)} ({self.channel_id if self.channel_id else 'vazio'})")
             print(f"   Headers: Authorization Bearer {self.api_token[:8]}...")
             
             response = requests.post(
