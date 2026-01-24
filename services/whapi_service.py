@@ -173,8 +173,8 @@ class WhapiService:
 ✂️ Serviço: {nome_servico}
 👤 Barbeiro: {nome_barbeiro}
 
-❌ Caso precise cancelar, acesse o site e faça o cancelamento:
-{base_url}
+❤️ Caso precise cancelar, acesse:
+agendador-barbearia.up.railway.app
 
 ⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
@@ -240,8 +240,8 @@ class WhapiService:
 ✂️ Serviço: {nome_servico}
 👤 Barbeiro: {nome_barbeiro}
 
-❌ Caso precise cancelar, acesse o site e faça o cancelamento:
-{base_url}
+❤️ Caso precise cancelar, acesse:
+agendador-barbearia.up.railway.app
 
 ⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
