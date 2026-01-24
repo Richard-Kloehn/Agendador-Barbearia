@@ -110,19 +110,14 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
         Agendamento.status.in_(['pendente', 'confirmado'])
     ).all()
     
-    # Criar set de horas ocupadas incluindo TODA a duração do serviço
-    horas_ocupadas = set()
+    # Criar lista de intervalos ocupados (hora_inicio, hora_fim) para verificação de sobreposição
+    intervalos_ocupados = []
     for agendamento in agendamentos_dia:
         # Pegar duração do serviço do agendamento
         duracao_agendamento = timedelta(minutes=agendamento.servico.duracao if agendamento.servico else 30)
         hora_inicio_agendamento = agendamento.data_hora
         hora_fim_agendamento = hora_inicio_agendamento + duracao_agendamento
-        
-        # Marcar TODOS os slots de 30 em 30 min durante o agendamento
-        slot_atual = hora_inicio_agendamento
-        while slot_atual < hora_fim_agendamento:
-            horas_ocupadas.add(slot_atual)
-            slot_atual += timedelta(minutes=30)  # Intervalo de 30 min
+        intervalos_ocupados.append((hora_inicio_agendamento, hora_fim_agendamento))
     
     while hora_atual < hora_final:
         # Se for hoje, ocultar horários que já passaram
@@ -136,18 +131,17 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
                 hora_atual += incremento  # Usar incremento dinâmico
                 continue
         
-        # Verificar se horário já está agendado ou se conflita com algum agendamento existente
-        # Precisamos verificar se o novo horário + duração do serviço não conflita
+        # Verificar se horário conflita com algum agendamento existente
+        # Novo agendamento: hora_atual até hora_atual + duracao
         hora_fim_novo = hora_atual + duracao
         conflito = False
         
-        # Verificar se algum slot do novo agendamento está ocupado
-        slot_verificacao = hora_atual
-        while slot_verificacao < hora_fim_novo:
-            if slot_verificacao in horas_ocupadas:
+        # Verificar sobreposição com todos os intervalos ocupados
+        # Há sobreposição se: novo_inicio < existente_fim AND novo_fim > existente_inicio
+        for inicio_ocupado, fim_ocupado in intervalos_ocupados:
+            if hora_atual < fim_ocupado and hora_fim_novo > inicio_ocupado:
                 conflito = True
                 break
-            slot_verificacao += timedelta(minutes=30)
         
         if not conflito:
             horarios.append(hora_atual.strftime('%H:%M'))
