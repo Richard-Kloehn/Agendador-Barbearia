@@ -122,7 +122,7 @@ class WhatsAppService:
 ✂️ *Serviço:* {nome_servico}
 👤 *Barbeiro:* {nome_barbeiro}
 
-❌ *Caso precise cancelar*, acesse o site e faça o cancelamento:
+❌ *Caso precise cancelar*, acesse:
 {base_url}
 
 ⚠️ *Importante:* Esta é uma mensagem automática. Não é necessário responder.

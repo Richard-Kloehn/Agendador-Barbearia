@@ -31,8 +31,8 @@ class WhapiService:
     
     def formatar_numero(self, numero: str) -> str:
         """
-        Formata número para padrão internacional
-        Ex: (11) 98765-4321 -> 5511987654321
+        Formata número para padrão internacional do WhatsApp
+        Ex: (11) 98765-4321 -> 5511987654321@s.whatsapp.net
         """
         # Remove caracteres não numéricos
         numero_limpo = ''.join(filter(str.isdigit, numero))
@@ -41,7 +41,8 @@ class WhapiService:
         if not numero_limpo.startswith('55'):
             numero_limpo = '55' + numero_limpo
         
-        return numero_limpo
+        # Adicionar sufixo do WhatsApp para garantir envio correto
+        return f"{numero_limpo}@s.whatsapp.net"
     
     def enviar_mensagem(self, numero: str, mensagem: str) -> bool:
         """
@@ -173,8 +174,8 @@ class WhapiService:
 ✂️ Serviço: {nome_servico}
 👤 Barbeiro: {nome_barbeiro}
 
-❤️ Caso precise cancelar, acesse:
-agendador-barbearia.up.railway.app
+❌ Caso precise cancelar, acesse:
+{base_url}
 
 ⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
@@ -240,8 +241,8 @@ agendador-barbearia.up.railway.app
 ✂️ Serviço: {nome_servico}
 👤 Barbeiro: {nome_barbeiro}
 
-❤️ Caso precise cancelar, acesse:
-agendador-barbearia.up.railway.app
+❌ Caso precise cancelar, acesse:
+{base_url}
 
 ⚠️ Importante: Esta é uma mensagem automática. Não é necessário responder.
 
