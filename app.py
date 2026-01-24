@@ -39,6 +39,50 @@ from database import db
 db.init_app(app)
 CORS(app)
 
+# Criar índices automaticamente na primeira execução (produção)
+def criar_indices_se_necessario():
+    """Cria índices no banco de dados se ainda não existirem"""
+    if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+        try:
+            from sqlalchemy import text
+            with app.app_context():
+                # Verificar se índices já existem
+                resultado = db.session.execute(text(
+                    "SELECT indexname FROM pg_indexes WHERE tablename = 'agendamento'"
+                )).fetchall()
+                
+                indices_existentes = [r[0] for r in resultado]
+                
+                if 'idx_agendamento_data_hora' not in indices_existentes:
+                    print("📊 Criando índices de performance...")
+                    
+                    # Criar todos os índices
+                    db.session.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_agendamento_data_hora ON agendamento(data_hora)"
+                    ))
+                    db.session.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_agendamento_barbeiro ON agendamento(barbeiro_id)"
+                    ))
+                    db.session.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_agendamento_status ON agendamento(status)"
+                    ))
+                    db.session.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_cliente_telefone ON cliente(telefone)"
+                    ))
+                    db.session.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_agendamento_data_status ON agendamento(data_hora, status)"
+                    ))
+                    
+                    db.session.commit()
+                    print("✅ Índices criados com sucesso!")
+                else:
+                    print("✅ Índices já existem")
+        except Exception as e:
+            print(f"⚠️ Erro ao criar índices: {e}")
+            
+# Criar índices ao iniciar
+criar_indices_se_necessario()
+
 # Compressão gzip para reduzir tamanho das respostas
 Compress(app)
 
