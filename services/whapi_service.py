@@ -14,7 +14,9 @@ class WhapiService:
     """Cliente para integração com whapi.cloud"""
     
     def __init__(self):
-        self.api_url = os.getenv('WHAPI_API_URL', 'https://gate.whapi.cloud')
+        # Garantir que URL não tenha barra final
+        api_url = os.getenv('WHAPI_API_URL', 'https://gate.whapi.cloud')
+        self.api_url = api_url.rstrip('/')
         self.api_token = os.getenv('WHAPI_API_TOKEN', '')
         self.channel_id = os.getenv('WHAPI_CHANNEL_ID', '')  # ID do canal (opcional)
         
@@ -34,12 +36,24 @@ class WhapiService:
         Formata número para padrão do WHAPI
         Ex: (11) 98765-4321 -> 5511987654321
         """
+        if not numero:
+            raise ValueError("Número de telefone vazio")
+        
         # Remove caracteres não numéricos
         numero_limpo = ''.join(filter(str.isdigit, numero))
+        
+        if not numero_limpo:
+            raise ValueError(f"Número inválido (sem dígitos): {numero}")
         
         # Adiciona código do Brasil se não tiver
         if not numero_limpo.startswith('55'):
             numero_limpo = '55' + numero_limpo
+        
+        # Validar tamanho (deve ter 12-13 dígitos: 55 + DDD + número)
+        if len(numero_limpo) < 12 or len(numero_limpo) > 13:
+            print(f"⚠️ Aviso: Número com tamanho incomum: {numero_limpo} (tamanho: {len(numero_limpo)})")
+        
+        print(f"📱 Número formatado: {numero} -> {numero_limpo}")
         
         # WHAPI usa apenas o número com código do país (sem @s.whatsapp.net)
         return numero_limpo
@@ -76,16 +90,18 @@ class WhapiService:
             # Usar endpoint padrão (token identifica o canal automaticamente)
             url = f'{self.api_url}/messages/text'
             
-            print(f"🔄 Enviando para {numero_formatado}...")
+            print(f"🔄 Enviando WhatsApp via WHAPI")
             print(f"   URL: {url}")
-            print(f"   Channel ID configurado: {bool(self.channel_id)} ({self.channel_id if self.channel_id else 'vazio'})")
-            print(f"   Headers: Authorization Bearer {self.api_token[:8]}...")
+            print(f"   Para: {numero_formatado}")
+            print(f"   Número original: {numero}")
+            print(f"   Payload: {payload}")
+            print(f"   Token: {self.api_token[:10]}...{self.api_token[-4:]}")
             
             response = requests.post(
                 url,
                 json=payload,
                 headers=headers,
-                timeout=30
+                timeout=60  # Aumentar para 60 segundos
             )
             
             print(f"📡 Resposta HTTP: {response.status_code}")
