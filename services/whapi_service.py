@@ -131,7 +131,7 @@ class WhapiService:
             print("⚠️ Agendamento sem telefone")
             return False
         
-        # Determinar saudação baseada no horário
+        # Determinar saudação baseada no horário ATUAL (quando a mensagem é enviada)
         hora_atual = datetime.now().hour
         if hora_atual < 12:
             saudacao = "Bom dia"
@@ -161,8 +161,8 @@ class WhapiService:
         except:
             nome_barbearia = "Navalha's Barber Club"
         
-        # URL do site para cancelamento
-        base_url = os.getenv('BASE_URL', 'https://agendador-barbearia.up.railway.app')
+        # URL correto do site
+        base_url = 'https://agendador-barbearia.up.railway.app'
         
         # Criar mensagem personalizada
         mensagem = f"""{saudacao}, {agendamento.nome_cliente}! ✂️
@@ -198,7 +198,7 @@ class WhapiService:
             print("⚠️ Agendamento sem telefone")
             return False
         
-        # Determinar saudação baseada no horário
+        # Determinar saudação baseada no horário ATUAL (quando o lembrete é enviado)
         hora_atual = datetime.now().hour
         if hora_atual < 12:
             saudacao = "Bom dia"
@@ -228,8 +228,8 @@ class WhapiService:
         except:
             nome_barbearia = "Navalha's Barber Club"
         
-        # URL do site para cancelamento
-        base_url = os.getenv('BASE_URL', 'https://agendador-barbearia.up.railway.app')
+        # URL correto do site
+        base_url = 'https://agendador-barbearia.up.railway.app'
         
         # Criar mensagem (igual ao script selenium)
         mensagem = f"""{saudacao}, {agendamento.nome_cliente}! ✂️
