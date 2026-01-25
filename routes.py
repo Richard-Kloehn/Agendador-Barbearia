@@ -10,8 +10,8 @@ import os
 from functools import lru_cache
 from sqlalchemy import and_, or_
 
-# Importar serviço de WhatsApp com whapi.cloud (nova integração)
-from services.whapi_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
+# Importar serviço de WhatsApp com Evolution API (gratuito e estável)
+from services.evolution_api_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
 
 api_bp = Blueprint('api', __name__)
 admin_bp = Blueprint('admin', __name__)
