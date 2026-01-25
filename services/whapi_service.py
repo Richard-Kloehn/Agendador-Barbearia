@@ -31,8 +31,8 @@ class WhapiService:
     
     def formatar_numero(self, numero: str) -> str:
         """
-        Formata número para padrão internacional do WhatsApp
-        Ex: (11) 98765-4321 -> 5511987654321@s.whatsapp.net
+        Formata número para padrão do WHAPI
+        Ex: (11) 98765-4321 -> 5511987654321
         """
         # Remove caracteres não numéricos
         numero_limpo = ''.join(filter(str.isdigit, numero))
@@ -41,8 +41,8 @@ class WhapiService:
         if not numero_limpo.startswith('55'):
             numero_limpo = '55' + numero_limpo
         
-        # Adicionar sufixo do WhatsApp para garantir envio correto
-        return f"{numero_limpo}@s.whatsapp.net"
+        # WHAPI usa apenas o número com código do país (sem @s.whatsapp.net)
+        return numero_limpo
     
     def enviar_mensagem(self, numero: str, mensagem: str) -> bool:
         """
