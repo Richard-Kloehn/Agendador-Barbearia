@@ -111,7 +111,7 @@ scheduler = BackgroundScheduler()
 
 def enviar_lembretes():
     """Envia lembretes 24 horas antes dos agendamentos via Evolution API"""
-    from services.evolution_api_service import enviar_lembrete_whatsapp
+    from services.whapi_service import enviar_lembrete_whatsapp
     
     with app.app_context():
         amanha = datetime.now() + timedelta(days=1)

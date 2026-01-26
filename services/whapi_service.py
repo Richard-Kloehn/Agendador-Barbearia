@@ -31,10 +31,99 @@ class WhapiService:
             print(f"✅ WHAPI configurado (Token: {token_preview})")
         return configurado
     
+    def validar_numero_whatsapp(self, numero: str) -> dict:
+        """
+        Valida número no WhatsApp usando POST /contacts da WHAPI.
+        Retorna o wa_id correto normalizado pela API.
+        
+        RECOMENDADO usar este método antes de enviar mensagens!
+        
+        Args:
+            numero: Número no formato (XX) XXXXX-XXXX ou similar
+            
+        Returns:
+            dict: {
+                'valido': bool,         # True se número tem WhatsApp ativo
+                'wa_id': str,           # ID do chat (ex: 5547991557386@s.whatsapp.net)
+                'numero': str           # Número formatado (ex: 5547991557386)
+            }
+        """
+        # Primeiro formata o número com as regras do Whapi
+        numero_formatado = self.formatar_numero(numero)
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        url = f"{self.api_url}/contacts"
+        payload = {
+            "force_check": False,
+            "contacts": [numero_formatado]
+        }
+        
+        try:
+            response = requests.post(url, json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                contacts = data.get('contacts', [])
+                
+                if contacts and len(contacts) > 0:
+                    resultado = contacts[0]
+                    status = resultado.get('status')
+                    wa_id = resultado.get('wa_id')
+                    
+                    if status == 'valid' and wa_id:
+                        # Extrair apenas o número (sem @s.whatsapp.net)
+                        numero_correto = wa_id.replace('@s.whatsapp.net', '')
+                        print(f"✅ Número validado: {numero} -> {numero_correto}")
+                        
+                        return {
+                            'valido': True,
+                            'wa_id': wa_id,
+                            'numero': numero_correto
+                        }
+                    else:
+                        print(f"❌ Número inválido: {numero} (não tem WhatsApp)")
+                        return {
+                            'valido': False,
+                            'wa_id': None,
+                            'numero': numero_formatado
+                        }
+            
+            print(f"⚠️ Erro ao validar número: HTTP {response.status_code}")
+            # Em caso de erro, retorna formato básico
+            return {
+                'valido': None,  # Desconhecido
+                'wa_id': None,
+                'numero': numero_formatado
+            }
+            
+        except Exception as e:
+            print(f"⚠️ Exceção ao validar número: {e}")
+            return {
+                'valido': None,
+                'wa_id': None,
+                'numero': numero_formatado
+            }
+    
     def formatar_numero(self, numero: str) -> str:
         """
-        Formata número para padrão do WHAPI
-        Ex: (11) 98765-4321 -> 5511987654321
+        Formata número brasileiro seguindo as regras oficiais do Whapi:
+        
+        - DDDs 11-19, 21, 22, 24, 27, 28: OBRIGATÓRIO adicionar "9" após o DDD
+        - Outros DDDs: REMOVER o "9" se presente
+        - Formato final: 55DDNXXXXXXXX (ex: 5547991557386 ou 559281723241)
+        
+        Para validação completa, use validar_numero_whatsapp().
+        
+        Args:
+            numero: Número no formato (XX) XXXXX-XXXX ou similar
+            
+        Returns:
+            str: Número formatado no padrão Whapi
         """
         if not numero:
             raise ValueError("Número de telefone vazio")
@@ -45,26 +134,54 @@ class WhapiService:
         if not numero_limpo:
             raise ValueError(f"Número inválido (sem dígitos): {numero}")
         
-        # Adiciona código do Brasil se não tiver
-        if not numero_limpo.startswith('55'):
-            numero_limpo = '55' + numero_limpo
+        # Remove código do Brasil se tiver
+        if numero_limpo.startswith('55'):
+            numero_limpo = numero_limpo[2:]
         
-        # Validar tamanho (deve ter 12-13 dígitos: 55 + DDD + número)
-        if len(numero_limpo) < 12 or len(numero_limpo) > 13:
-            print(f"⚠️ Aviso: Número com tamanho incomum: {numero_limpo} (tamanho: {len(numero_limpo)})")
+        if len(numero_limpo) < 10:
+            raise ValueError(f"Número muito curto: {numero_limpo}")
         
-        print(f"📱 Número formatado: {numero} -> {numero_limpo}")
+        # Extrair DDD e resto do número
+        ddd = numero_limpo[:2]
+        resto = numero_limpo[2:]
         
-        # WHAPI usa apenas o número com código do país (sem @s.whatsapp.net)
-        return numero_limpo
+        # DDDs que OBRIGATORIAMENTE precisam do 9
+        ddds_com_9 = ['11', '12', '13', '14', '15', '16', '17', '18', '19',
+                      '21', '22', '24', '27', '28']
+        
+        if ddd in ddds_com_9:
+            # Verificar se já tem o 9
+            if resto.startswith('9') and len(resto) == 9:
+                # Já está correto
+                numero_final = numero_limpo
+            elif len(resto) == 8:
+                # Adicionar o 9
+                numero_final = ddd + '9' + resto
+                print(f"   ➕ Adicionado 9 para DDD {ddd}")
+            else:
+                # Já tem 9 dígitos e começa com 9, manter
+                numero_final = numero_limpo
+        else:
+            # Outros DDDs: REMOVER o 9 se presente
+            if resto.startswith('9') and len(resto) == 9:
+                # Remover o 9
+                numero_final = ddd + resto[1:]
+                print(f"   ➖ Removido 9 para DDD {ddd}")
+            else:
+                # Já está sem o 9
+                numero_final = numero_limpo
+        
+        # Adicionar código do Brasil
+        return '55' + numero_final
     
-    def enviar_mensagem(self, numero: str, mensagem: str) -> bool:
+    def enviar_mensagem(self, numero: str, mensagem: str, validar: bool = True) -> bool:
         """
         Envia mensagem de texto via whapi.cloud
         
         Args:
             numero: Número do destinatário (formato: (11) 98765-4321 ou 11987654321)
             mensagem: Texto da mensagem
+            validar: Se True, valida o número antes de enviar usando POST /contacts (recomendado)
             
         Returns:
             bool: True se enviado com sucesso
@@ -74,25 +191,42 @@ class WhapiService:
             return False
         
         try:
-            numero_formatado = self.formatar_numero(numero)
+            # Validar número antes de enviar (obtém wa_id correto)
+            if validar:
+                validacao = self.validar_numero_whatsapp(numero)
+                
+                if validacao['valido'] == False:
+                    print(f"❌ Número {numero} não tem WhatsApp ativo")
+                    return False
+                
+                # Usar wa_id retornado pela API (formato: 554791557386@s.whatsapp.net)
+                if validacao['wa_id']:
+                    # Converter para formato @c.us que a API de envio usa
+                    numero_envio = validacao['wa_id'].replace('@s.whatsapp.net', '')
+                else:
+                    numero_envio = validacao['numero']
+            else:
+                # Formatação básica sem validação
+                numero_envio = self.formatar_numero(numero)
             
             headers = {
                 'Authorization': f'Bearer {self.api_token}',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             }
             
+            # Formato correto do payload WHAPI para mensagens de texto
             payload = {
-                'typing_time': 0,
-                'to': numero_formatado,
-                'body': mensagem
+                'to': numero_envio,  # Apenas o número, sem @c.us ou @s.whatsapp.net
+                'body': mensagem     # 'body' ao invés de 'message'
             }
             
-            # Usar endpoint padrão (token identifica o canal automaticamente)
+            # Endpoint correto do WHAPI para enviar mensagem de texto
             url = f'{self.api_url}/messages/text'
             
             print(f"🔄 Enviando WhatsApp via WHAPI")
             print(f"   URL: {url}")
-            print(f"   Para: {numero_formatado}")
+            print(f"   Para: {numero_envio}")
             print(f"   Número original: {numero}")
             print(f"   Payload: {payload}")
             print(f"   Token: {self.api_token[:10]}...{self.api_token[-4:]}")
@@ -105,13 +239,26 @@ class WhapiService:
             )
             
             print(f"📡 Resposta HTTP: {response.status_code}")
+            print(f"📄 Resposta completa (raw): {response.text}")
             
             if response.status_code in [200, 201]:
-                result = response.json()
-                print(f"✅ WhatsApp enviado para {numero} via whapi.cloud")
-                print(f"   Número formatado: {numero_formatado}")
-                print(f"   ID da mensagem: {result.get('id', 'N/A')}")
-                return True
+                try:
+                    result = response.json()
+                    print(f"📋 JSON da resposta: {result}")
+                    
+                    # Verificar se houve erro na resposta mesmo com status 200
+                    if 'error' in result or 'errors' in result:
+                        print(f"❌ WHAPI retornou erro: {result}")
+                        return False
+                    
+                    print(f"✅ WhatsApp enviado para {numero} via whapi.cloud")
+                    print(f"   Número formatado: {numero_envio}")
+                    print(f"   ID da mensagem: {result.get('id', result.get('message_id', 'N/A'))}")
+                    return True
+                except Exception as e:
+                    print(f"❌ Erro ao processar resposta JSON: {e}")
+                    print(f"   Resposta raw: {response.text}")
+                    return False
             else:
                 # Tentar obter mais detalhes do erro
                 try:
