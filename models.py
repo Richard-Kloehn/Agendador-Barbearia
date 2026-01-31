@@ -99,6 +99,9 @@ class Agendamento(db.Model):
     confirmado_cliente = db.Column(db.Boolean, default=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     observacoes = db.Column(db.Text)
+    avaliacao = db.Column(db.Integer)  # Nota de 1 a 5
+    comentario_avaliacao = db.Column(db.Text)
+    data_avaliacao = db.Column(db.DateTime)
     
     def __init__(self, **kwargs):
         super(Agendamento, self).__init__(**kwargs)
@@ -117,7 +120,10 @@ class Agendamento(db.Model):
             'observacoes': self.observacoes,
             'data_criacao': self.data_criacao.isoformat() if self.data_criacao else None,
             'barbeiro': self.barbeiro.to_dict() if self.barbeiro else None,
-            'servico': self.servico.to_dict() if self.servico else None
+            'servico': self.servico.to_dict() if self.servico else None,
+            'avaliacao': self.avaliacao,
+            'comentario_avaliacao': self.comentario_avaliacao,
+            'data_avaliacao': self.data_avaliacao.isoformat() if self.data_avaliacao else None
         }
 
 class ConfiguracaoBarbearia(db.Model):
@@ -215,3 +221,86 @@ class HorarioBarbeiro(db.Model):
             'intervalo_almoco_fim': self.intervalo_almoco_fim,
             'ativo': self.ativo
         }
+
+class ListaEspera(db.Model):
+    __tablename__ = 'lista_espera'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nome_cliente = db.Column(db.String(100), nullable=False)
+    telefone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(100))
+    barbeiro_id = db.Column(db.Integer, db.ForeignKey('barbeiros.id'), nullable=False)
+    servico_id = db.Column(db.Integer, db.ForeignKey('servicos.id'), nullable=False)
+    data_preferencia = db.Column(db.Date, nullable=False)  # Dia que quer
+    horario_preferencia = db.Column(db.String(5))  # Horário que quer (opcional)
+    status = db.Column(db.String(20), default='aguardando')  # aguardando, notificado, convertido, cancelado
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    notificado = db.Column(db.Boolean, default=False)
+    observacoes = db.Column(db.Text)
+    
+    # Relacionamentos
+    barbeiro = db.relationship('Barbeiro', backref='lista_espera')
+    servico = db.relationship('Servico', backref='lista_espera')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nome_cliente': self.nome_cliente,
+            'telefone': self.telefone,
+            'email': self.email,
+            'barbeiro': self.barbeiro.to_dict() if self.barbeiro else None,
+            'servico': self.servico.to_dict() if self.servico else None,
+            'data_preferencia': self.data_preferencia.isoformat() if self.data_preferencia else None,
+            'horario_preferencia': self.horario_preferencia,
+            'status': self.status,
+            'data_criacao': self.data_criacao.isoformat() if self.data_criacao else None,
+            'notificado': self.notificado,
+            'observacoes': self.observacoes
+        }
+
+class GaleriaTrabalhos(db.Model):
+    __tablename__ = 'galeria_trabalhos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(100))
+    descricao = db.Column(db.String(200))
+    imagem_url = db.Column(db.String(300), nullable=False)
+    barbeiro_id = db.Column(db.Integer, db.ForeignKey('barbeiros.id'))
+    servico_id = db.Column(db.Integer, db.ForeignKey('servicos.id'))
+    ativo = db.Column(db.Boolean, default=True)
+    ordem = db.Column(db.Integer, default=0)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relacionamentos
+    barbeiro = db.relationship('Barbeiro', backref='trabalhos')
+    servico = db.relationship('Servico', backref='trabalhos')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'titulo': self.titulo,
+            'descricao': self.descricao,
+            'imagem_url': self.imagem_url,
+            'barbeiro': self.barbeiro.to_dict() if self.barbeiro else None,
+            'servico': self.servico.to_dict() if self.servico else None,
+            'ativo': self.ativo,
+            'ordem': self.ordem,
+            'data_criacao': self.data_criacao.isoformat() if self.data_criacao else None
+        }
+
+class ConfiguracaoGeral(db.Model):
+    __tablename__ = 'configuracao_geral'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    chave = db.Column(db.String(50), unique=True, nullable=False)
+    valor = db.Column(db.Text)
+    descricao = db.Column(db.String(200))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'chave': self.chave,
+            'valor': self.valor,
+            'descricao': self.descricao
+        }
+

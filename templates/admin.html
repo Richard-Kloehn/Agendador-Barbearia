@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Admin - Barbearia</title>
+    <meta name="description" content="Painel administrativo da barbearia para gerenciar agendamentos, barbeiros e serviços.">
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+    <link rel="alternate icon" href="/static/img/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -198,6 +201,15 @@
                 </div>
                 <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('configuracoes'); closeMobileMenu()">
                     <i class="fas fa-clock w-5 mr-3"></i>Horários
+                </div>
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('contato'); closeMobileMenu()">
+                    <i class="fas fa-address-card w-5 mr-3"></i>Contato/Redes
+                </div>
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('lista-espera'); closeMobileMenu()">
+                    <i class="fas fa-list-ul w-5 mr-3"></i>Lista de Espera
+                </div>
+                <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('galeria'); closeMobileMenu()">
+                    <i class="fas fa-images w-5 mr-3"></i>Galeria
                 </div>
                 <div class="sidebar-item px-6 py-3" onclick="mostrarSecao('dashboard'); closeMobileMenu()">
                     <i class="fas fa-chart-line w-5 mr-3"></i>Dashboard
@@ -981,6 +993,196 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Contato e Redes Sociais Section -->
+                <section id="secao-contato" class="secao hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">
+                                <i class="fas fa-address-card mr-2" style="color: #daa520;"></i>Informações de Contato e Redes Sociais
+                            </h3>
+                            <p class="text-sm text-gray-600">Configure as informações que aparecem no rodapé do site</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Contato -->
+                            <div class="bg-gray-50 rounded-xl p-6">
+                                <h4 class="text-lg font-bold text-gray-800 mb-4">
+                                    <i class="fas fa-phone mr-2 text-blue-600"></i>Contato
+                                </h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
+                                        <input type="tel" id="contatoTelefone" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="(11) 99999-9999">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+                                        <input type="tel" id="contatoWhatsApp" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="5511999999999">
+                                        <p class="text-xs text-gray-500 mt-1">Número com DDI+DDD (ex: 5511999999999)</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                                        <input type="email" id="contatoEmail" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="contato@barbearia.com">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Redes Sociais -->
+                            <div class="bg-gray-50 rounded-xl p-6">
+                                <h4 class="text-lg font-bold text-gray-800 mb-4">
+                                    <i class="fas fa-share-alt mr-2 text-purple-600"></i>Redes Sociais
+                                </h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fab fa-instagram mr-1"></i>Instagram
+                                        </label>
+                                        <input type="url" id="redesInstagram" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="https://instagram.com/suabarbearia">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fab fa-facebook mr-1"></i>Facebook
+                                        </label>
+                                        <input type="url" id="redesFacebook" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="https://facebook.com/suabarbearia">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fab fa-tiktok mr-1"></i>TikTok (Opcional)
+                                        </label>
+                                        <input type="url" id="redesTiktok" 
+                                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                            placeholder="https://tiktok.com/@suabarbearia">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Endereço -->
+                        <div class="bg-gray-50 rounded-xl p-6 mt-6">
+                            <h4 class="text-lg font-bold text-gray-800 mb-4">
+                                <i class="fas fa-map-marker-alt mr-2 text-red-600"></i>Endereço
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Rua/Avenida</label>
+                                    <input type="text" id="enderecoRua" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="Rua Exemplo, 123">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Bairro</label>
+                                    <input type="text" id="enderecoBairro" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="Centro">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Cidade</label>
+                                    <input type="text" id="enderecoCidade" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="São Paulo">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">CEP</label>
+                                    <input type="text" id="enderecoCep" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="01234-567">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Link Google Maps</label>
+                                    <input type="url" id="enderecoMaps" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="https://maps.google.com/?q=Rua+Exemplo+123">
+                                    <p class="text-xs text-gray-500 mt-1">Cole o link do Google Maps aqui</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Horários de Funcionamento -->
+                        <div class="bg-gray-50 rounded-xl p-6 mt-6">
+                            <h4 class="text-lg font-bold text-gray-800 mb-4">
+                                <i class="fas fa-clock mr-2 text-green-600"></i>Horários de Funcionamento (Exibição no Footer)
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Segunda a Sexta</label>
+                                    <input type="text" id="horarioSegSex" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="09:00 - 19:00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Sábado</label>
+                                    <input type="text" id="horarioSabado" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="09:00 - 17:00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Domingo</label>
+                                    <input type="text" id="horarioDomingo" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="Fechado">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Feriados</label>
+                                    <input type="text" id="horarioFeriados" 
+                                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-600 focus:outline-none"
+                                        placeholder="Consulte">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botão Salvar -->
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button onclick="carregarInformacoesContato()" 
+                                class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-semibold">
+                                <i class="fas fa-redo mr-2"></i>Resetar
+                            </button>
+                            <button onclick="salvarInformacoesContato()" 
+                                class="px-6 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                                <i class="fas fa-save mr-2"></i>Salvar Informações
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Lista de Espera Section -->
+                <section id="secao-lista-espera" class="secao hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                            <i class="fas fa-list-ul mr-2" style="color: #daa520;"></i>Lista de Espera
+                        </h3>
+
+                        <!-- Lista de pessoas na fila -->
+                        <div id="listaEspera" class="space-y-4">
+                            <!-- Será preenchido dinamicamente -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Galeria Section -->
+                <section id="secao-galeria" class="secao hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-2 md:px-4 mt-[-22px] mb-6">
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800">
+                            <i class="fas fa-images mr-2" style="color: #daa520;"></i>Galeria de Trabalhos
+                        </h3>
+                        <button onclick="abrirModalAdicionarFoto()" class="w-full sm:w-auto bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition">
+                            <i class="fas fa-plus mr-2"></i>Adicionar Foto
+                        </button>
+                    </div>
+
+                    <div id="galeriaAdmin" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <!-- Fotos serão inseridas aqui -->
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -1125,6 +1327,9 @@
                 'barbeiros': 'Gerenciar Barbeiros',
                 'servicos': 'Gerenciar Serviços',
                 'configuracoes': 'Horários',
+                'contato': 'Contato e Redes Sociais',
+                'lista-espera': 'Lista de Espera',
+                'galeria': 'Galeria de Trabalhos',
                 'dashboard': 'Dashboard'
             };
             document.getElementById('tituloSecao').textContent = titulos[secao];
@@ -1142,6 +1347,12 @@
                 carregarServicos();
             } else if (secao === 'configuracoes') {
                 carregarConfiguracao();
+            } else if (secao === 'contato') {
+                carregarInformacoesContato();
+            } else if (secao === 'lista-espera') {
+                carregarListaEspera();
+            } else if (secao === 'galeria') {
+                carregarGaleriaAdmin();
             } else if (secao === 'dashboard') {
                 carregarListaBarbeirosDashboard();
                 carregarDashboard();
@@ -3512,6 +3723,231 @@
             } catch (error) {
                 console.error('Erro:', error);
                 showToast('Erro ao deletar serviço', 'error');
+            }
+        }
+
+        // ========== LISTA DE ESPERA ==========
+        async function carregarListaEspera() {
+            try {
+                const response = await fetch('/api/lista-espera');
+                const dados = await response.json();
+                
+                const container = document.getElementById('listaEspera');
+                
+                if (dados.lista && dados.lista.length > 0) {
+                    container.innerHTML = '';
+                    dados.lista.forEach(pessoa => {
+                        const dataObj = new Date(pessoa.data_preferencia + 'T00:00:00');
+                        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                        
+                        const div = document.createElement('div');
+                        div.className = 'bg-gray-50 border-2 border-gray-200 rounded-xl p-4 hover:border-yellow-600 transition';
+                        div.innerHTML = `
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-gray-800">${pessoa.nome_cliente}</h4>
+                                    <p class="text-sm text-gray-600"><i class="fas fa-phone mr-1"></i>${pessoa.telefone}</p>
+                                    ${pessoa.email ? `<p class="text-sm text-gray-600"><i class="fas fa-envelope mr-1"></i>${pessoa.email}</p>` : ''}
+                                    <p class="text-sm text-gray-600 mt-1"><i class="fas fa-calendar mr-1"></i>${dataFormatada}</p>
+                                    ${pessoa.horario_preferencia ? `<p class="text-sm text-gray-600"><i class="fas fa-clock mr-1"></i>${pessoa.horario_preferencia}</p>` : ''}
+                                    ${pessoa.barbeiro ? `<p class="text-sm text-gray-600"><i class="fas fa-cut mr-1"></i>${pessoa.barbeiro.nome}</p>` : ''}
+                                    ${pessoa.servico ? `<p class="text-sm text-gray-600"><i class="fas fa-scissors mr-1"></i>${pessoa.servico.nome}</p>` : ''}
+                                </div>
+                                <button onclick="removerDaListaEspera(${pessoa.id})" 
+                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm transition">
+                                    <i class="fas fa-times"></i> Remover
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-12 bg-gray-50 rounded-xl">
+                            <i class="fas fa-list-ul text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">Nenhuma pessoa na lista de espera</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                const container = document.getElementById('listaEspera');
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-red-50 rounded-xl">
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
+                        <p class="text-red-600">Erro ao carregar lista de espera</p>
+                        <p class="text-sm text-gray-600 mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function removerDaListaEspera(id) {
+            if (!confirm('Deseja remover esta pessoa da lista de espera?')) return;
+            
+            try {
+                const response = await fetch(`/api/lista-espera/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showToast('Removido da lista de espera', 'success');
+                    carregarListaEspera();
+                } else {
+                    showToast('Erro ao remover', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro ao remover', 'error');
+            }
+        }
+
+        // ========== GALERIA ==========
+        async function carregarGaleriaAdmin() {
+            try {
+                const response = await fetch('/api/galeria');
+                const dados = await response.json();
+                
+                const container = document.getElementById('galeriaAdmin');
+                
+                if (dados.trabalhos && dados.trabalhos.length > 0) {
+                    container.innerHTML = '';
+                    dados.trabalhos.forEach(trabalho => {
+                        const div = document.createElement('div');
+                        div.className = 'relative group rounded-xl overflow-hidden shadow-lg';
+                        div.innerHTML = `
+                            <img src="${trabalho.imagem_url}" alt="${trabalho.descricao || 'Trabalho'}" 
+                                class="w-full h-48 object-cover">
+                            <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                <button onclick="deletarTrabalho(${trabalho.id})" 
+                                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
+                                    <i class="fas fa-trash mr-2"></i>Excluir
+                                </button>
+                            </div>
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 p-3 text-white text-sm">
+                                <p class="font-bold">${trabalho.barbeiro}</p>
+                                <p class="text-xs">${trabalho.descricao || ''}</p>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-12 bg-gray-50 rounded-xl">
+                            <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">Nenhuma foto na galeria</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro ao carregar galeria', 'error');
+            }
+        }
+
+        function abrirModalAdicionarFoto() {
+            showToast('Funcionalidade de upload de fotos será implementada em breve', 'info');
+        }
+
+        async function deletarTrabalho(id) {
+            if (!confirm('Deseja excluir esta foto da galeria?')) return;
+            
+            try {
+                const response = await fetch(`/api/galeria/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showToast('Foto excluída com sucesso', 'success');
+                    carregarGaleriaAdmin();
+                } else {
+                    showToast('Erro ao excluir foto', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro ao excluir foto', 'error');
+            }
+        }
+
+        // ========== INFORMAÇÕES DE CONTATO E REDES SOCIAIS ==========
+        async function carregarInformacoesContato() {
+            try {
+                const response = await fetch('/api/configuracoes/contato');
+                const dados = await response.json();
+                
+                // Preencher campos de contato
+                document.getElementById('contatoTelefone').value = dados.contato_telefone || '';
+                document.getElementById('contatoWhatsApp').value = dados.contato_whatsapp || '';
+                document.getElementById('contatoEmail').value = dados.contato_email || '';
+                
+                // Redes sociais
+                document.getElementById('redesInstagram').value = dados.redes_instagram || '';
+                document.getElementById('redesFacebook').value = dados.redes_facebook || '';
+                document.getElementById('redesTiktok').value = dados.redes_tiktok || '';
+                
+                // Endereço
+                document.getElementById('enderecoRua').value = dados.endereco_rua || '';
+                document.getElementById('enderecoBairro').value = dados.endereco_bairro || '';
+                document.getElementById('enderecoCidade').value = dados.endereco_cidade || '';
+                document.getElementById('enderecoCep').value = dados.endereco_cep || '';
+                document.getElementById('enderecoMaps').value = dados.endereco_maps || '';
+                
+                // Horários
+                document.getElementById('horarioSegSex').value = dados.horario_seg_sex || '09:00 - 19:00';
+                document.getElementById('horarioSabado').value = dados.horario_sabado || '09:00 - 17:00';
+                document.getElementById('horarioDomingo').value = dados.horario_domingo || 'Fechado';
+                document.getElementById('horarioFeriados').value = dados.horario_feriados || 'Consulte';
+            } catch (error) {
+                console.error('Erro ao carregar informações:', error);
+                // Preencher com valores padrão
+                document.getElementById('contatoTelefone').value = '(11) 99999-9999';
+                document.getElementById('contatoWhatsApp').value = '5511999999999';
+                document.getElementById('contatoEmail').value = 'contato@barbearia.com';
+                document.getElementById('enderecoRua').value = 'Rua Exemplo, 123';
+                document.getElementById('enderecoBairro').value = 'Centro';
+                document.getElementById('enderecoCidade').value = 'São Paulo - SP';
+                document.getElementById('enderecoCep').value = '01234-567';
+                document.getElementById('horarioSegSex').value = '09:00 - 19:00';
+                document.getElementById('horarioSabado').value = '09:00 - 17:00';
+                document.getElementById('horarioDomingo').value = 'Fechado';
+                document.getElementById('horarioFeriados').value = 'Consulte';
+            }
+        }
+
+        async function salvarInformacoesContato() {
+            const dados = {
+                contato_telefone: document.getElementById('contatoTelefone').value,
+                contato_whatsapp: document.getElementById('contatoWhatsApp').value,
+                contato_email: document.getElementById('contatoEmail').value,
+                redes_instagram: document.getElementById('redesInstagram').value,
+                redes_facebook: document.getElementById('redesFacebook').value,
+                redes_tiktok: document.getElementById('redesTiktok').value,
+                endereco_rua: document.getElementById('enderecoRua').value,
+                endereco_bairro: document.getElementById('enderecoBairro').value,
+                endereco_cidade: document.getElementById('enderecoCidade').value,
+                endereco_cep: document.getElementById('enderecoCep').value,
+                endereco_maps: document.getElementById('enderecoMaps').value,
+                horario_seg_sex: document.getElementById('horarioSegSex').value,
+                horario_sabado: document.getElementById('horarioSabado').value,
+                horario_domingo: document.getElementById('horarioDomingo').value,
+                horario_feriados: document.getElementById('horarioFeriados').value
+            };
+
+            try {
+                const response = await fetch('/api/configuracoes/contato', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (response.ok) {
+                    showToast('Informações salvas com sucesso!', 'success');
+                } else {
+                    showToast('Erro ao salvar informações', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro ao salvar informações', 'error');
             }
         }
     </script>

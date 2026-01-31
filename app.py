@@ -1,9 +1,18 @@
 from flask import Flask, render_template, session, redirect, url_for, request
 from flask_cors import CORS
 from flask_compress import Compress
+try:
+    from flask_wtf.csrf import CSRFProtect
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    SEGURANCA_ATIVA = True
+except ImportError:
+    SEGURANCA_ATIVA = False
+    print("⚠️ Módulos de segurança não instalados. Execute: pip install flask-wtf flask-limiter")
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,8 +26,14 @@ if database_url and database_url.startswith('postgres://'):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['ADMIN_PASSWORD'] = '123'  # Senha do admin
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
+app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', '123')  # Senha via env
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # Token CSRF não expira
+
+# Configurações de política de cancelamento
+app.config['PRAZO_MINIMO_CANCELAMENTO_HORAS'] = int(os.getenv('PRAZO_MINIMO_CANCELAMENTO_HORAS', '2'))
+app.config['PRAZO_MINIMO_REAGENDAMENTO_HORAS'] = int(os.getenv('PRAZO_MINIMO_REAGENDAMENTO_HORAS', '2'))
 
 # Otimizações para produção
 if database_url and 'postgresql' in database_url:
@@ -38,6 +53,22 @@ if database_url and 'postgresql' in database_url:
 from database import db
 db.init_app(app)
 CORS(app)
+
+# Proteção CSRF (se disponível)
+if SEGURANCA_ATIVA:
+    csrf = CSRFProtect(app)
+    print("✅ Proteção CSRF ativada")
+    
+    # Rate Limiting (proteção contra spam/abuso)
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri="memory://"
+    )
+    print("✅ Rate Limiting ativado")
+else:
+    print("⚠️ Segurança básica - instale flask-wtf e flask-limiter para proteção completa")
 
 # Criar índices automaticamente na primeira execução (produção)
 def criar_indices_se_necessario():

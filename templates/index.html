@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agendamento - Barbearia</title>
+    <title>Agendamento - Barbearia Premium</title>
+    <meta name="description" content="Agende seu horário na melhor barbearia da região. Atendimento de qualidade com os melhores profissionais.">
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+    <link rel="alternate icon" href="/static/img/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -201,7 +204,23 @@
                     <i class="fas fa-cut text-yellow-600 text-lg"></i>
                     <div class="w-16 h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent"></div>
                 </div>
-                <p class="text-base text-white opacity-90 font-light tracking-wide text-center">Agende seu horário de forma rápida e fácil</p>
+                <div class="flex flex-wrap items-center justify-center gap-3">
+                    <p class="text-base text-white opacity-90 font-light tracking-wide">Agende seu horário de forma rápida e fácil</p>
+                    <div class="flex items-center gap-2">
+                        <a id="barraWhatsApp" href="#" target="_blank" title="WhatsApp"
+                           class="bg-green-600 hover:bg-green-700 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                            <i class="fab fa-whatsapp text-sm"></i>
+                        </a>
+                        <a id="barraInstagram" href="#" target="_blank" title="Instagram"
+                           class="bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                            <i class="fab fa-instagram text-sm"></i>
+                        </a>
+                        <button onclick="scrollToFooter()" title="Endereço"
+                           class="bg-yellow-600 hover:bg-yellow-700 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                            <i class="fas fa-map-marker-alt text-sm"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -227,7 +246,8 @@
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
                                 placeholder="Digite seu nome completo"
                                 autocomplete="off"
-                                oninput="buscarCliente()">
+                                oninput="buscarCliente(); validarNomeEmTempoReal()">
+                            <small id="erroNome" class="text-red-500 text-xs hidden mt-1"></small>
                             <!-- Dropdown de sugestões -->
                             <div id="sugestoesCliente" class="hidden absolute z-10 w-full mt-1 bg-white border-2 gold-border rounded-xl shadow-lg max-h-48 overflow-y-auto"></div>
                         </div>
@@ -239,7 +259,9 @@
                             <input type="tel" id="telefone" 
                                 class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
                                 placeholder="(11) 99999-9999"
+                                oninput="validarTelefoneEmTempoReal()"
                                 required>
+                            <small id="erroTelefone" class="text-red-500 text-xs hidden mt-1"></small>
                             
                             <div class="mt-3">
                                 <label class="flex items-center cursor-pointer">
@@ -252,9 +274,10 @@
                             </p>
                         </div>
                         
-                        <button onclick="irParaStep2()" 
+                        <button onclick="irParaStep2()" id="btnContinuarStep1"
                             class="w-full btn-primary text-white font-bold py-4 rounded-xl shadow-lg">
-                            Continuar <i class="fas fa-arrow-right ml-2"></i>
+                            <span id="textoBtnStep1">Continuar <i class="fas fa-arrow-right ml-2"></i></span>
+                            <span id="loadingBtnStep1" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Processando...</span>
                         </button>
                     </div>
                 </div>
@@ -386,18 +409,45 @@
                         <i class="fas fa-check-circle text-green-500 text-7xl mb-4"></i>
                         <h2 class="text-3xl font-bold text-gray-800 mb-3">Agendamento Confirmado!</h2>
                         <p class="text-gray-600 text-lg">Seu horário foi reservado com sucesso.</p>
+                        
+                        <!-- Token para reagendamento e avaliação -->
+                        <input type="hidden" id="tokenAgendamento" value="">
                     </div>
-                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6 text-center">
-                        <p class="text-lg text-gray-800 flex items-center justify-center gap-2">
-                            <i class="fas fa-info-circle text-yellow-600"></i>
-                            Você receberá um lembrete no WhatsApp 24 horas antes do seu horário.
+                    
+                    <!-- Resumo do agendamento criado -->
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 mb-6">
+                        <div class="space-y-2 text-left mb-4">
+                            <p class="text-sm text-gray-700"><i class="fas fa-calendar gold-text mr-2"></i><strong>Data:</strong> <span id="sucessoData"></span></p>
+                            <p class="text-sm text-gray-700"><i class="fas fa-clock gold-text mr-2"></i><strong>Horário:</strong> <span id="sucessoHorario"></span></p>
+                            <p class="text-sm text-gray-700"><i class="fas fa-cut gold-text mr-2"></i><strong>Barbeiro:</strong> <span id="sucessoBarbeiro"></span></p>
+                            <p class="text-sm text-gray-700"><i class="fas fa-scissors gold-text mr-2"></i><strong>Serviço:</strong> <span id="sucessoServico"></span></p>
+                        </div>
+                        <p class="text-sm text-gray-800 text-center">
+                            <i class="fas fa-info-circle text-yellow-600 mr-2"></i>
+                            <span id="mensagemSucessoWhatsApp">Você receberá um lembrete no WhatsApp 24 horas antes.</span>
                         </p>
                     </div>
-                    <button onclick="novoAgendamento()" 
-                        class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-4 rounded-xl shadow-lg transition">
-                        <i class="fas fa-plus mr-2"></i>Fazer Novo Agendamento
-                    </button>
+                    
+                    <!-- Opções após confirmação -->
+                    <div class="space-y-3">
+                        <button onclick="abrirReagendamento()" id="btnReagendar"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                            <i class="fas fa-calendar-alt mr-2"></i>Reagendar Este Horário
+                        </button>
+                        
+                        <button onclick="novoAgendamento()" 
+                            class="w-full bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                            <i class="fas fa-plus mr-2"></i>Fazer Novo Agendamento
+                        </button>
+                    </div>
                 </div>
+            </div>
+            
+            <!-- Botão Lista de Espera - Aparece quando não há horários -->
+            <div id="botaoListaEspera" class="text-center mt-6 hidden">
+                <button onclick="abrirModalListaEspera()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition transform hover:scale-105">
+                    <i class="fas fa-list-ul mr-2"></i>Sem horário disponível? Entre na Lista de Espera
+                </button>
             </div>
             
             <!-- Link para Cancelar Agendamento - Visível apenas no Step 1 -->
@@ -407,7 +457,7 @@
                 </button>
             </div>
             
-            <!-- Link Admin logo abaixo do botão de cancelamento -->
+            <!-- Link Admin logo abaixo -->
             <div id="botaoAdminExterno" class="text-center mt-3">
                 <a href="/admin-login" class="inline-flex items-center gap-1.5 bg-gray-800 hover:bg-gray-900 text-white font-normal px-4 py-2 rounded-lg shadow-sm transition text-sm">
                     <i class="fas fa-lock text-xs"></i>
@@ -416,6 +466,110 @@
             </div>
         </div>
     </main>
+
+    <!-- Footer com Redes Sociais e Contato -->
+    <footer class="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Contato -->
+                <div class="text-center md:text-left">
+                    <h3 class="text-lg font-bold mb-4 gold-text">
+                        <i class="fas fa-phone mr-2"></i>Contato
+                    </h3>
+                    <ul class="space-y-2 text-sm">
+                        <li>
+                            <a id="footerTelefone" href="tel:+5511999999999" class="hover:text-yellow-500 transition">
+                                <i class="fas fa-phone-alt mr-2"></i><span id="footerTelefoneTexto">(11) 99999-9999</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a id="footerWhatsApp" href="https://wa.me/5511999999999" target="_blank" class="hover:text-yellow-500 transition">
+                                <i class="fab fa-whatsapp mr-2"></i>WhatsApp
+                            </a>
+                        </li>
+                        <li>
+                            <a id="footerEmail" href="mailto:contato@barbearia.com" class="hover:text-yellow-500 transition">
+                                <i class="fas fa-envelope mr-2"></i><span id="footerEmailTexto">contato@barbearia.com</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Redes Sociais -->
+                <div class="text-center">
+                    <h3 class="text-lg font-bold mb-4 gold-text">
+                        <i class="fas fa-share-alt mr-2"></i>Redes Sociais
+                    </h3>
+                    <div class="flex justify-center gap-4">
+                        <a id="footerInstagram" href="https://instagram.com/suabarbearia" target="_blank" 
+                           class="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition transform">
+                            <i class="fab fa-instagram text-xl"></i>
+                        </a>
+                        <a id="footerFacebook" href="https://facebook.com/suabarbearia" target="_blank" 
+                           class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center hover:scale-110 transition transform">
+                            <i class="fab fa-facebook-f text-xl"></i>
+                        </a>
+                    </div>
+                    <p class="text-xs mt-4 text-gray-400">Siga-nos nas redes sociais!</p>
+                </div>
+
+                <!-- Endereço -->
+                <div class="text-center md:text-right">
+                    <h3 class="text-lg font-bold mb-4 gold-text">
+                        <i class="fas fa-map-marker-alt mr-2"></i>Endereço
+                    </h3>
+                    <p class="text-sm" id="footerEndereco">
+                        <span id="footerRua">Rua Exemplo, 123</span><br>
+                        <span id="footerBairro">Bairro Centro</span><br>
+                        <span id="footerCidade">São Paulo - SP</span><br>
+                        CEP: <span id="footerCep">01234-567</span>
+                    </p>
+                    <a id="footerMaps" href="https://maps.google.com/?q=Rua+Exemplo+123+São+Paulo" target="_blank" 
+                       class="inline-block mt-3 text-yellow-500 hover:text-yellow-400 transition text-sm">
+                        <i class="fas fa-directions mr-1"></i>Ver no mapa
+                    </a>
+                </div>
+            </div>
+
+            <!-- Horários de Funcionamento -->
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center">
+                <h3 class="text-sm font-bold mb-3 gold-text">
+                    <i class="fas fa-clock mr-2"></i>Horário de Funcionamento
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs max-w-2xl mx-auto">
+                    <div>
+                        <strong>Segunda a Sexta</strong><br>
+                        <span id="footerHorarioSegSex">09:00 - 19:00</span>
+                    </div>
+                    <div>
+                        <strong>Sábado</strong><br>
+                        <span id="footerHorarioSabado">09:00 - 17:00</span>
+                    </div>
+                    <div>
+                        <strong>Domingo</strong><br>
+                        <span id="footerHorarioDomingo">Fechado</span>
+                    </div>
+                    <div>
+                        <strong>Feriados</strong><br>
+                        <span id="footerHorarioFeriados">Consulte</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Galeria de Trabalhos -->
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center">
+                <button onclick="abrirGaleria()" class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-8 py-3.5 rounded-xl shadow-lg transition-all hover:scale-105">
+                    <i class="fas fa-images text-lg"></i>
+                    <span>Ver Galeria de Trabalhos</span>
+                </button>
+            </div>
+
+            <!-- Copyright -->
+            <div class="border-t border-gray-700 mt-6 pt-4 text-center text-xs text-gray-400">
+                <p>&copy; 2026 Barbearia. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
     
     <script>
         // Sistema de Notificações
@@ -562,6 +716,9 @@
             
             dataInput.setAttribute('min', hoje);
             
+            // Carregar informações do footer
+            carregarFooter();
+            
             // Controlar visibilidade do placeholder
             function atualizarPlaceholder() {
                 if (dataInput.value) {
@@ -613,6 +770,62 @@
                 }
             });
         });
+
+        // ===== VALIDAÇÃO EM TEMPO REAL =====
+        function validarNomeEmTempoReal() {
+            const nomeInput = document.getElementById('nome');
+            const erroNome = document.getElementById('erroNome');
+            const nome = nomeInput.value.trim();
+            
+            if (nome.length === 0) {
+                erroNome.classList.add('hidden');
+                nomeInput.classList.remove('border-red-500');
+                return;
+            }
+            
+            const partesNome = nome.split(/\s+/).filter(p => p.length > 0);
+            
+            if (partesNome.length < 2) {
+                erroNome.textContent = 'Digite nome e sobrenome';
+                erroNome.classList.remove('hidden');
+                nomeInput.classList.add('border-red-500');
+            } else if (partesNome.some(p => p.length < 2)) {
+                erroNome.textContent = 'Nome muito curto';
+                erroNome.classList.remove('hidden');
+                nomeInput.classList.add('border-red-500');
+            } else {
+                erroNome.classList.add('hidden');
+                nomeInput.classList.remove('border-red-500');
+                nomeInput.classList.add('border-green-500');
+            }
+        }
+        
+        function validarTelefoneEmTempoReal() {
+            const telefoneInput = document.getElementById('telefone');
+            const erroTelefone = document.getElementById('erroTelefone');
+            const telefone = telefoneInput.value.trim();
+            const telefoneNumeros = telefone.replace(/\D/g, '');
+            
+            if (telefone.length === 0) {
+                erroTelefone.classList.add('hidden');
+                telefoneInput.classList.remove('border-red-500');
+                return;
+            }
+            
+            if (telefoneNumeros.length < 10) {
+                erroTelefone.textContent = 'Telefone incompleto';
+                erroTelefone.classList.remove('hidden');
+                telefoneInput.classList.add('border-red-500');
+            } else if (telefoneNumeros.length > 11) {
+                erroTelefone.textContent = 'Telefone inválido';
+                erroTelefone.classList.remove('hidden');
+                telefoneInput.classList.add('border-red-500');
+            } else {
+                erroTelefone.classList.add('hidden');
+                telefoneInput.classList.remove('border-red-500');
+                telefoneInput.classList.add('border-green-500');
+            }
+        }
 
         function toggleWhatsApp() {
             const semWhatsApp = document.getElementById('semWhatsApp').checked;
@@ -1009,15 +1222,27 @@
                 const resultado = await response.json();
                 
                 if (response.ok) {
-                    // Atualizar mensagem de sucesso baseado na opção de WhatsApp
-                    const listaSucesso = document.getElementById('listaSucesso');
-                    if (dadosAgendamento.semWhatsApp) {
-                        listaSucesso.innerHTML = `
-                            <li><i class="fas fa-check text-green-600 mr-2"></i>Seu agendamento foi confirmado</li>
-                            <li><i class="fas fa-check text-green-600 mr-2"></i>Compareça no dia e horário marcados</li>
-                            <li><i class="fas fa-info-circle text-blue-600 mr-2"></i>Guarde os dados do seu agendamento</li>
-                        `;
+                    // Salvar token para reagendamento e avaliação
+                    if (resultado.agendamento && resultado.agendamento.token_confirmacao) {
+                        document.getElementById('tokenAgendamento').value = resultado.agendamento.token_confirmacao;
+                        tokenReagendamento = resultado.agendamento.token_confirmacao;
                     }
+                    
+                    // Preencher dados do Step 4
+                    const dataObj = new Date(resultado.agendamento.data_hora);
+                    document.getElementById('sucessoData').textContent = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    document.getElementById('sucessoHorario').textContent = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('sucessoBarbeiro').textContent = barbeiroSelecionado.nome;
+                    document.getElementById('sucessoServico').textContent = servicoSelecionado.nome;
+                    
+                    // Atualizar mensagem de WhatsApp
+                    const mensagemWhatsApp = document.getElementById('mensagemSucessoWhatsApp');
+                    if (dadosAgendamento.semWhatsApp) {
+                        mensagemWhatsApp.textContent = 'Guarde os dados do seu agendamento. Compareça no dia e horário marcados.';
+                    } else {
+                        mensagemWhatsApp.textContent = 'Você receberá um lembrete no WhatsApp 24 horas antes.';
+                    }
+                    
                     mostrarStep(4);
                 } else {
                     mostrarNotificacao(resultado.erro || 'Erro ao criar agendamento', 'error');
@@ -1035,7 +1260,231 @@
         function novoAgendamento() {
             location.reload();
         }
+
+        // ==================== CARREGAR FOOTER ====================
+        async function carregarFooter() {
+            try {
+                const response = await fetch('/api/configuracoes/contato');
+                const config = await response.json();
+                
+                // Ícones de Redes Sociais no Topo
+                if (config.contato_whatsapp) {
+                    const whatsLink = `https://wa.me/${config.contato_whatsapp}`;
+                    document.getElementById('barraWhatsApp').href = whatsLink;
+                }
+                
+                if (config.redes_instagram) {
+                    document.getElementById('barraInstagram').href = config.redes_instagram;
+                }
+                
+                // Contato Rápido (visível na página principal)
+                if (config.contato_telefone) {
+                    const telLimpo = config.contato_telefone.replace(/\D/g, '');
+                    document.getElementById('contatoRapidoTelefone').href = `tel:+55${telLimpo}`;
+                    document.getElementById('contatoRapidoTelefoneTexto').textContent = config.contato_telefone;
+                }
+                
+                if (config.contato_whatsapp) {
+                    const whatsLink = `https://wa.me/${config.contato_whatsapp}`;
+                    document.getElementById('contatoRapidoWhatsApp').href = whatsLink;
+                }
+                
+                if (config.endereco_rua && config.endereco_cidade) {
+                    document.getElementById('contatoRapidoEnderecoTexto').textContent = `${config.endereco_rua} - ${config.endereco_cidade}`;
+                }
+                
+                // Footer (contato completo)
+                if (config.contato_telefone) {
+                    const telLimpo = config.contato_telefone.replace(/\D/g, '');
+                    document.getElementById('footerTelefone').href = `tel:+55${telLimpo}`;
+                    document.getElementById('footerTelefoneTexto').textContent = config.contato_telefone;
+                }
+                
+                if (config.contato_whatsapp) {
+                    const whatsLink = `https://wa.me/${config.contato_whatsapp}`;
+                    document.getElementById('footerWhatsApp').href = whatsLink;
+                    document.getElementById('footerWhatsAppBtn').href = whatsLink;
+                }
+                
+                if (config.contato_email) {
+                    document.getElementById('footerEmail').href = `mailto:${config.contato_email}`;
+                    document.getElementById('footerEmailTexto').textContent = config.contato_email;
+                }
+                
+                // Redes Sociais
+                if (config.redes_instagram) {
+                    document.getElementById('footerInstagram').href = config.redes_instagram;
+                }
+                
+                if (config.redes_facebook) {
+                    document.getElementById('footerFacebook').href = config.redes_facebook;
+                }
+                
+                // Endereço
+                if (config.endereco_rua) {
+                    document.getElementById('footerRua').textContent = config.endereco_rua;
+                }
+                
+                if (config.endereco_bairro) {
+                    document.getElementById('footerBairro').textContent = config.endereco_bairro;
+                }
+                
+                if (config.endereco_cidade) {
+                    document.getElementById('footerCidade').textContent = config.endereco_cidade;
+                }
+                
+                if (config.endereco_cep) {
+                    document.getElementById('footerCep').textContent = config.endereco_cep;
+                }
+                
+                if (config.endereco_maps) {
+                    document.getElementById('footerMaps').href = config.endereco_maps;
+                }
+                
+                // Horários
+                if (config.horario_seg_sex) {
+                    document.getElementById('footerHorarioSegSex').textContent = config.horario_seg_sex;
+                }
+                
+                if (config.horario_sabado) {
+                    document.getElementById('footerHorarioSabado').textContent = config.horario_sabado;
+                }
+                
+                if (config.horario_domingo) {
+                    document.getElementById('footerHorarioDomingo').textContent = config.horario_domingo;
+                }
+                
+                if (config.horario_feriados) {
+                    document.getElementById('footerHorarioFeriados').textContent = config.horario_feriados;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar footer:', error);
+                // Manter valores padrão se houver erro
+            }
+        }
+        
+        // Função para rolar até o footer
+        function scrollToFooter() {
+            document.querySelector('footer').scrollIntoView({ behavior: 'smooth' });
+        }
     </script>
+
+    <!-- Modal Lista de Espera -->
+    <div id="modalListaEspera" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-list-ul mr-2 gold-text"></i>Lista de Espera
+                </h3>
+                <button onclick="fecharModalListaEspera()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-6">Não encontrou horário disponível? Entre na lista de espera e te avisaremos quando houver um cancelamento!</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-user mr-2 gold-text"></i>Nome Completo
+                    </label>
+                    <input type="text" id="nomeListaEspera" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                        placeholder="Digite seu nome completo">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-phone mr-2 gold-text"></i>Telefone
+                    </label>
+                    <input type="tel" id="telefoneListaEspera" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                        placeholder="(11) 99999-9999">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-calendar mr-2 gold-text"></i>Data Preferida
+                    </label>
+                    <input type="date" id="dataListaEspera" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-clock mr-2 gold-text"></i>Horário Preferido (Opcional)
+                    </label>
+                    <input type="time" id="horarioListaEspera" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition">
+                </div>
+                
+                <button onclick="enviarListaEspera()" 
+                    class="w-full btn-primary text-white font-bold py-3 rounded-xl shadow-lg">
+                    <i class="fas fa-check mr-2"></i>Entrar na Lista de Espera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Galeria -->
+    <div id="modalGaleria" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-images mr-2 gold-text"></i>Galeria de Trabalhos
+                </h3>
+                <button onclick="fecharModalGaleria()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div id="galeriaGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Galeria será carregada aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reagendamento -->
+    <div id="modalReagendar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-calendar-alt mr-2 gold-text"></i>Reagendar
+                </h3>
+                <button onclick="fecharModalReagendar()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <p class="text-gray-600 mb-6">Escolha a nova data e horário para seu agendamento:</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-calendar mr-2 gold-text"></i>Nova Data
+                    </label>
+                    <input type="date" id="novaDataReagendar" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition"
+                        onchange="carregarHorariosReagendar()">
+                </div>
+                
+                <div id="horariosReagendar" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-clock mr-2 gold-text"></i>Novo Horário
+                    </label>
+                    <select id="novoHorarioReagendar" 
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:gold-border focus:outline-none transition">
+                        <option value="">Selecione um horário</option>
+                    </select>
+                </div>
+                
+                <button onclick="confirmarReagendamento()" 
+                    class="w-full btn-primary text-white font-bold py-3 rounded-xl shadow-lg">
+                    <i class="fas fa-check mr-2"></i>Confirmar Reagendamento
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Cancelar Agendamento -->
     <div id="modalCancelar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1301,6 +1750,198 @@
             } catch (error) {
                 console.error('Erro ao cancelar:', error);
                 mostrarNotificacao('Erro ao cancelar agendamento. Tente novamente.', 'error');
+            }
+        }
+
+        // ==================== LISTA DE ESPERA ====================
+        function abrirModalListaEspera() {
+            document.getElementById('modalListaEspera').classList.remove('hidden');
+            // Pré-preencher data com a data selecionada no agendamento, se houver
+            if (dataSelecionada) {
+                document.getElementById('dataListaEspera').value = dataSelecionada;
+            }
+        }
+
+        function fecharModalListaEspera() {
+            document.getElementById('modalListaEspera').classList.add('hidden');
+            // Limpar campos
+            document.getElementById('nomeListaEspera').value = '';
+            document.getElementById('telefoneListaEspera').value = '';
+            document.getElementById('dataListaEspera').value = '';
+            document.getElementById('horarioListaEspera').value = '';
+        }
+
+        async function enviarListaEspera() {
+            const nome = document.getElementById('nomeListaEspera').value.trim();
+            const telefone = document.getElementById('telefoneListaEspera').value.trim();
+            const data = document.getElementById('dataListaEspera').value;
+            const horario = document.getElementById('horarioListaEspera').value;
+
+            if (!nome || !telefone || !data) {
+                mostrarNotificacao('Preencha todos os campos obrigatórios', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/lista-espera', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: nome,
+                        telefone: telefone,
+                        data_preferida: data,
+                        horario_preferido: horario || null,
+                        servico_id: servicoSelecionado ? servicoSelecionado.id : null,
+                        barbeiro_id: barbeiroSelecionado ? barbeiroSelecionado.id : null
+                    })
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    mostrarNotificacao('✅ Você entrou na lista de espera! Avisaremos quando houver vaga.', 'success');
+                    fecharModalListaEspera();
+                } else {
+                    mostrarNotificacao(resultado.erro || 'Erro ao entrar na lista de espera', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarNotificacao('Erro ao entrar na lista de espera. Tente novamente.', 'error');
+            }
+        }
+
+        // ==================== GALERIA ====================
+        async function abrirGaleria() {
+            document.getElementById('modalGaleria').classList.remove('hidden');
+            await carregarGaleria();
+        }
+
+        function fecharModalGaleria() {
+            document.getElementById('modalGaleria').classList.add('hidden');
+        }
+
+        async function carregarGaleria() {
+            const grid = document.getElementById('galeriaGrid');
+            grid.innerHTML = '<div class="col-span-full text-center py-8"><i class="fas fa-spinner fa-spin text-4xl gold-text"></i></div>';
+
+            try {
+                const response = await fetch('/api/galeria');
+                const dados = await response.json();
+
+                if (dados.trabalhos && dados.trabalhos.length > 0) {
+                    grid.innerHTML = '';
+                    dados.trabalhos.forEach(trabalho => {
+                        const div = document.createElement('div');
+                        div.className = 'relative rounded-xl overflow-hidden shadow-lg group cursor-pointer';
+                        div.innerHTML = `
+                            <img src="${trabalho.imagem_url}" alt="${trabalho.descricao || 'Trabalho'}" 
+                                class="w-full h-48 object-cover group-hover:scale-110 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition">
+                                <div class="absolute bottom-0 p-4 text-white">
+                                    <p class="font-bold">${trabalho.barbeiro}</p>
+                                    <p class="text-sm">${trabalho.descricao || ''}</p>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(div);
+                    });
+                } else {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">Nenhum trabalho na galeria ainda</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                grid.innerHTML = '<div class="col-span-full text-center text-red-600 py-8">Erro ao carregar galeria</div>';
+            }
+        }
+
+        // ==================== REAGENDAMENTO ====================
+        let tokenReagendamento = null;
+
+        function abrirReagendamento() {
+            // Aqui você precisaria do token de confirmação do agendamento
+            // Por enquanto, vamos usar um placeholder
+            mostrarNotificacao('Para reagendar, acesse o link enviado no seu WhatsApp ou email de confirmação', 'info');
+            // Em produção, isso seria chamado de um link tipo: /reagendar?token=ABC123
+        }
+
+        function fecharModalReagendar() {
+            document.getElementById('modalReagendar').classList.add('hidden');
+            document.getElementById('novaDataReagendar').value = '';
+            document.getElementById('novoHorarioReagendar').innerHTML = '<option value="">Selecione um horário</option>';
+            document.getElementById('horariosReagendar').classList.add('hidden');
+        }
+
+        async function carregarHorariosReagendar() {
+            const novaData = document.getElementById('novaDataReagendar').value;
+            if (!novaData) return;
+
+            const selectHorarios = document.getElementById('novoHorarioReagendar');
+            selectHorarios.innerHTML = '<option value="">Carregando...</option>';
+            document.getElementById('horariosReagendar').classList.remove('hidden');
+
+            try {
+                // Buscar horários disponíveis para a nova data
+                const response = await fetch(`/api/horarios-disponiveis?data=${novaData}&barbeiro_id=${barbeiroSelecionado?.id || ''}&servico_id=${servicoSelecionado?.id || ''}`);
+                const dados = await response.json();
+
+                selectHorarios.innerHTML = '<option value="">Selecione um horário</option>';
+                
+                if (dados.horarios && dados.horarios.length > 0) {
+                    dados.horarios.forEach(horario => {
+                        const option = document.createElement('option');
+                        option.value = horario.hora;
+                        option.textContent = horario.hora;
+                        selectHorarios.appendChild(option);
+                    });
+                } else {
+                    selectHorarios.innerHTML = '<option value="">Sem horários disponíveis</option>';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                selectHorarios.innerHTML = '<option value="">Erro ao carregar horários</option>';
+            }
+        }
+
+        async function confirmarReagendamento() {
+            const novaData = document.getElementById('novaDataReagendar').value;
+            const novoHorario = document.getElementById('novoHorarioReagendar').value;
+
+            if (!novaData || !novoHorario) {
+                mostrarNotificacao('Selecione data e horário', 'warning');
+                return;
+            }
+
+            if (!tokenReagendamento) {
+                mostrarNotificacao('Token de reagendamento inválido', 'error');
+                return;
+            }
+
+            try {
+                const dataHora = `${novaData}T${novoHorario}:00`;
+                const response = await fetch(`/api/reagendar/${tokenReagendamento}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nova_data_hora: dataHora
+                    })
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    mostrarNotificacao('✅ Agendamento reagendado com sucesso!', 'success');
+                    fecharModalReagendar();
+                } else {
+                    mostrarNotificacao(resultado.erro || 'Erro ao reagendar', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarNotificacao('Erro ao reagendar. Tente novamente.', 'error');
             }
         }
     </script>

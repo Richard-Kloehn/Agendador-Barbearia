@@ -3,12 +3,20 @@ from datetime import datetime, timedelta, time, timezone
 from database import db
 import pytz
 from sqlalchemy.orm import joinedload
-from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro
+from models import Agendamento, ConfiguracaoBarbearia, DiaIndisponivel, Cliente, HorarioEspecial, Barbeiro, Servico, HorarioBarbeiro, ListaEspera, GaleriaTrabalhos, ConfiguracaoGeral
 from werkzeug.utils import secure_filename
 import re
 import os
 from functools import lru_cache
 from sqlalchemy import and_, or_
+import threading
+from utils import (
+    sanitizar_dados_agendamento,
+    validar_dados_agendamento,
+    validar_prazo_minimo,
+    sanitizar_texto,
+    validar_telefone_brasileiro
+)
 
 # Importar serviço de WhatsApp com Evolution API (gratuito e estável)
 from services.whapi_service import enviar_confirmacao_agendamento, enviar_lembrete_whatsapp
@@ -19,6 +27,23 @@ admin_bp = Blueprint('admin', __name__)
 # Cache para dados que mudam pouco
 _cache_dias_com_barbeiros = {'data': None, 'valor': None}
 _cache_config = {'data': None, 'valor': None}
+
+def enviar_lembrete_background(agendamento_id, app):
+    """Envia lembrete do WhatsApp em background (thread separada)"""
+    with app.app_context():
+        try:
+            agendamento = Agendamento.query.get(agendamento_id)
+            if agendamento:
+                print(f"⚡ Enviando lembrete em background para {agendamento.nome_cliente}")
+                lembrete_enviado = enviar_lembrete_whatsapp(agendamento)
+                if lembrete_enviado:
+                    agendamento.lembrete_enviado = True
+                    db.session.commit()
+                    print(f"✅ Lembrete enviado com sucesso em background")
+                else:
+                    print(f"❌ Falha no envio do lembrete em background")
+        except Exception as e:
+            print(f"❌ Erro ao enviar lembrete em background: {e}")
 
 def validar_telefone(telefone):
     """Valida formato de telefone brasileiro"""
@@ -306,26 +331,26 @@ def listar_datas_disponiveis():
 
 @api_bp.route('/agendar', methods=['POST'])
 def criar_agendamento():
-    """Cria novo agendamento e salva/atualiza dados do cliente"""
+    """Cria novo agendamento e salva/atualiza dados do cliente com validações"""
     dados = request.get_json()
     
-    # Validações
-    if not dados.get('nome_cliente') or not dados.get('data_hora') or not dados.get('barbeiro_id') or not dados.get('servico_id'):
-        return jsonify({'erro': 'Dados incompletos'}), 400
+    # Sanitizar dados de entrada
+    dados_limpos = sanitizar_dados_agendamento(dados)
+    
+    # Validar dados
+    erros_validacao = validar_dados_agendamento(dados_limpos)
+    if erros_validacao:
+        return jsonify({'erro': erros_validacao[0], 'erros': erros_validacao}), 400
     
     # Validar nome completo (mínimo 2 palavras)
-    nome_cliente = dados.get('nome_cliente', '').strip()
+    nome_cliente = dados_limpos.get('nome_cliente', '').strip()
     partes_nome = [p for p in nome_cliente.split() if len(p) > 0]
     if len(partes_nome) < 2:
         return jsonify({'erro': 'Por favor, informe seu nome completo (nome e sobrenome)'}), 400
     
-    # Validar que cada parte do nome tem pelo menos 2 caracteres
-    if any(len(parte) < 2 for parte in partes_nome):
-        return jsonify({'erro': 'Por favor, informe um nome completo válido'}), 400
-    
     # Validar barbeiro e serviço
-    barbeiro_id = dados.get('barbeiro_id')
-    servico_id = dados.get('servico_id')
+    barbeiro_id = dados_limpos.get('barbeiro_id')
+    servico_id = dados_limpos.get('servico_id')
     
     barbeiro = Barbeiro.query.get(barbeiro_id)
     if not barbeiro or not barbeiro.ativo:
@@ -423,24 +448,19 @@ def criar_agendamento():
     db.session.commit()
     
     # Verificar se o agendamento é para menos de 24 horas
-    # Se sim, enviar lembrete imediatamente
+    # Se sim, enviar lembrete imediatamente em background (não bloqueia a resposta)
     tempo_ate_agendamento = data_hora - datetime.now()
     horas_ate_agendamento = tempo_ate_agendamento.total_seconds() / 3600
     
-    lembrete_enviado = False
     if horas_ate_agendamento < 24 and telefone_limpo:
-        # Agendamento com menos de 24h - enviar lembrete imediatamente
-        try:
-            print(f"⚡ Agendamento em menos de 24h - Enviando lembrete imediato para {agendamento.nome_cliente}")
-            lembrete_enviado = enviar_lembrete_whatsapp(agendamento)
-            if lembrete_enviado:
-                agendamento.lembrete_enviado = True
-                db.session.commit()
-                print(f"✅ Lembrete imediato enviado com sucesso")
-            else:
-                print(f"❌ Falha no envio do lembrete imediato")
-        except Exception as e:
-            print(f"❌ Erro ao enviar lembrete imediato: {e}")
+        # Agendamento com menos de 24h - enviar lembrete em background
+        print(f"⚡ Agendamento em menos de 24h - Agendando envio de lembrete em background para {agendamento.nome_cliente}")
+        thread = threading.Thread(
+            target=enviar_lembrete_background,
+            args=(agendamento.id, current_app._get_current_object())
+        )
+        thread.daemon = True
+        thread.start()
     else:
         print(f"📅 Agendamento para mais de 24h - Lembrete será enviado automaticamente pelo scheduler")
     
@@ -448,7 +468,7 @@ def criar_agendamento():
         'mensagem': 'Agendamento criado com sucesso!',
         'agendamento': agendamento.to_dict(),
         'cliente': cliente.to_dict() if cliente else None,
-        'lembrete_enviado': lembrete_enviado
+        'lembrete_agendado': horas_ate_agendamento < 24
     }), 201
 
 @api_bp.route('/confirmar/<token>', methods=['POST'])
@@ -467,6 +487,14 @@ def confirmar_agendamento_api(token):
         agendamento.confirmado_cliente = True
         mensagem = 'Agendamento confirmado com sucesso!'
     elif acao == 'cancelar':
+        # Verificar prazo mínimo para cancelamento
+        prazo_minimo = current_app.config.get('PRAZO_MINIMO_CANCELAMENTO_HORAS', 2)
+        
+        if not validar_prazo_minimo(agendamento.data_hora, prazo_minimo):
+            return jsonify({
+                'erro': f'Não é possível cancelar com menos de {prazo_minimo} horas de antecedência. Entre em contato conosco.'
+            }), 400
+        
         agendamento.status = 'cancelado'
         mensagem = 'Agendamento cancelado'
     else:
@@ -1288,5 +1316,306 @@ def deletar_dia_indisponivel(id):
     db.session.delete(dia)
     db.session.commit()
     
-    return jsonify({'mensagem': 'Dia removido'})
+    return jsonify({'mensagem': 'Dia removido com sucesso'})
 
+# ===== NOVAS ROTAS - LISTA DE ESPERA =====
+
+@api_bp.route('/lista-espera', methods=['POST'])
+def adicionar_lista_espera():
+    """Adiciona cliente à lista de espera quando horário está ocupado"""
+    dados = request.get_json()
+    
+    # Aceitar tanto 'nome' quanto 'nome_cliente' para compatibilidade
+    nome = sanitizar_texto(dados.get('nome_cliente') or dados.get('nome', ''))
+    telefone = dados.get('telefone', '')
+    
+    if not nome or not telefone:
+        return jsonify({'erro': 'Nome e telefone são obrigatórios'}), 400
+    
+    if not validar_telefone_brasileiro(telefone):
+        return jsonify({'erro': 'Telefone inválido'}), 400
+    
+    # Aceitar tanto 'data_preferencia' quanto 'data_preferida'
+    data_campo = dados.get('data_preferencia') or dados.get('data_preferida')
+    try:
+        data_pref = datetime.strptime(data_campo, '%Y-%m-%d').date()
+    except:
+        return jsonify({'erro': 'Data inválida'}), 400
+    
+    # Aceitar tanto 'horario_preferencia' quanto 'horario_preferido'
+    horario = dados.get('horario_preferencia') or dados.get('horario_preferido')
+    
+    # Barbeiro e serviço podem ser opcionais ou obrigatórios dependendo da configuração
+    barbeiro_id = dados.get('barbeiro_id') or 1  # ID padrão
+    servico_id = dados.get('servico_id') or 1    # ID padrão
+    
+    lista = ListaEspera(
+        nome_cliente=nome,
+        telefone=re.sub(r'\D', '', telefone),
+        email=sanitizar_texto(dados.get('email', '')),
+        barbeiro_id=barbeiro_id,
+        servico_id=servico_id,
+        data_preferencia=data_pref,
+        horario_preferencia=horario,
+        observacoes=sanitizar_texto(dados.get('observacoes', ''))[:500]
+    )
+    
+    db.session.add(lista)
+    db.session.commit()
+    
+    return jsonify({
+        'mensagem': 'Você foi adicionado à lista de espera! Avisaremos quando houver disponibilidade.',
+        'lista_espera': lista.to_dict()
+    }), 201
+
+# ===== NOVAS ROTAS - AVALIAÇÃO =====
+
+@api_bp.route('/avaliar/<token>', methods=['POST'])
+def avaliar_agendamento(token):
+    """Cliente avalia o atendimento após o serviço"""
+    agendamento = Agendamento.query.filter_by(token_confirmacao=token).first()
+    
+    if not agendamento:
+        return jsonify({'erro': 'Agendamento não encontrado'}), 404
+    
+    # Só pode avaliar se o agendamento já passou
+    if agendamento.data_hora > datetime.now():
+        return jsonify({'erro': 'Só é possível avaliar após o atendimento'}), 400
+    
+    # Verificar se já foi avaliado
+    if agendamento.avaliacao:
+        return jsonify({'erro': 'Este agendamento já foi avaliado'}), 400
+    
+    dados = request.get_json()
+    avaliacao = dados.get('avaliacao')
+    
+    if not avaliacao or avaliacao < 1 or avaliacao > 5:
+        return jsonify({'erro': 'Avaliação deve ser de 1 a 5 estrelas'}), 400
+    
+    agendamento.avaliacao = avaliacao
+    agendamento.comentario_avaliacao = sanitizar_texto(dados.get('comentario', ''))[:500]
+    agendamento.data_avaliacao = datetime.now()
+    
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Obrigado pela sua avaliação!'})
+
+# ===== NOVAS ROTAS - REAGENDAMENTO =====
+
+@api_bp.route('/reagendar/<token>', methods=['POST'])
+def reagendar_agendamento(token):
+    """Permite reagendar sem cancelar e criar novo"""
+    agendamento = Agendamento.query.filter_by(token_confirmacao=token).first()
+    
+    if not agendamento:
+        return jsonify({'erro': 'Agendamento não encontrado'}), 404
+    
+    if agendamento.status == 'cancelado':
+        return jsonify({'erro': 'Não é possível reagendar um agendamento cancelado'}), 400
+    
+    # Verificar prazo mínimo
+    prazo_minimo = current_app.config.get('PRAZO_MINIMO_REAGENDAMENTO_HORAS', 2)
+    
+    if not validar_prazo_minimo(agendamento.data_hora, prazo_minimo):
+        return jsonify({
+            'erro': f'Não é possível reagendar com menos de {prazo_minimo} horas de antecedência.'
+        }), 400
+    
+    dados = request.get_json()
+    
+    try:
+        nova_data_hora = datetime.fromisoformat(dados.get('nova_data_hora').replace('Z', '+00:00'))
+    except:
+        return jsonify({'erro': 'Data/hora inválida'}), 400
+    
+    # Verificar se a nova data é futura
+    if nova_data_hora <= datetime.now():
+        return jsonify({'erro': 'A nova data deve ser futura'}), 400
+    
+    # Verificar disponibilidade do horário
+    servico = agendamento.servico
+    hora_fim_novo = nova_data_hora + timedelta(minutes=servico.duracao)
+    
+    conflitos = Agendamento.query.filter(
+        Agendamento.id != agendamento.id,  # Excluir o próprio agendamento
+        Agendamento.barbeiro_id == agendamento.barbeiro_id,
+        Agendamento.status.in_(['pendente', 'confirmado']),
+        Agendamento.data_hora < hora_fim_novo,
+        Agendamento.data_hora >= datetime.combine(nova_data_hora.date(), time(0, 0))
+    ).all()
+    
+    for conflito in conflitos:
+        hora_fim_conflito = conflito.data_hora + timedelta(minutes=conflito.servico.duracao if conflito.servico else 30)
+        if nova_data_hora < hora_fim_conflito:
+            return jsonify({'erro': 'Este horário não está mais disponível'}), 409
+    
+    # Reagendar
+    agendamento.data_hora = nova_data_hora
+    agendamento.lembrete_enviado = False  # Resetar para enviar novo lembrete
+    
+    db.session.commit()
+    
+    return jsonify({
+        'mensagem': 'Agendamento reagendado com sucesso!',
+        'agendamento': agendamento.to_dict()
+    })
+
+# ===== NOVAS ROTAS - GALERIA =====
+
+@api_bp.route('/galeria', methods=['GET'])
+def listar_galeria():
+    """Lista trabalhos da galeria"""
+    trabalhos = GaleriaTrabalhos.query.filter_by(ativo=True).order_by(
+        GaleriaTrabalhos.ordem.desc(),
+        GaleriaTrabalhos.data_criacao.desc()
+    ).limit(20).all()
+    
+    return jsonify({
+        'trabalhos': [t.to_dict() for t in trabalhos]
+    })
+
+# ===== NOVAS ROTAS - LISTA DE ESPERA (GET para admin) =====
+
+@api_bp.route('/lista-espera', methods=['GET'])
+def listar_lista_espera():
+    """Lista todos na lista de espera (para admin via API)"""
+    try:
+        lista = ListaEspera.query.filter_by(status='aguardando').order_by(
+            ListaEspera.data_criacao.asc()
+        ).all()
+        
+        return jsonify({
+            'lista': [item.to_dict() for item in lista]
+        })
+    except Exception as e:
+        print(f"Erro ao listar lista de espera: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+# ===== ROTAS ADMIN - LISTA DE ESPERA =====
+
+@admin_bp.route('/lista-espera', methods=['GET'])
+def admin_listar_espera():
+    """Lista todos os clientes na lista de espera"""
+    status = request.args.get('status', 'aguardando')
+    
+    query = ListaEspera.query.filter_by(status=status).order_by(
+        ListaEspera.data_criacao.asc()
+    )
+    
+    lista = query.all()
+    
+    return jsonify({
+        'lista_espera': [item.to_dict() for item in lista]
+    })
+
+@admin_bp.route('/lista-espera/<int:id>/notificar', methods=['POST'])
+def notificar_lista_espera(id):
+    """Notifica cliente da lista de espera sobre vaga disponível"""
+    item = ListaEspera.query.get(id)
+    
+    if not item:
+        return jsonify({'erro': 'Item não encontrado'}), 404
+    
+    # Aqui você pode adicionar lógica para enviar WhatsApp
+    item.notificado = True
+    item.status = 'notificado'
+    
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Cliente notificado com sucesso'})
+
+@admin_bp.route('/lista-espera/<int:id>', methods=['DELETE'])
+def remover_lista_espera(id):
+    """Remove item da lista de espera"""
+    item = ListaEspera.query.get(id)
+    
+    if not item:
+        return jsonify({'erro': 'Item não encontrado'}), 404
+    
+    db.session.delete(item)
+    db.session.commit()
+    
+    return jsonify({'mensagem': 'Item removido da lista de espera'})
+
+# ===== ROTAS - CONFIGURAÇÕES DE CONTATO =====
+
+@api_bp.route('/configuracoes/contato', methods=['GET'])
+def obter_configuracoes_contato():
+    """Retorna todas as configurações de contato"""
+    try:
+        # Buscar todas as configurações
+        configs = {}
+        configuracoes = ConfiguracaoGeral.query.all()
+        
+        for config in configuracoes:
+            configs[config.chave] = config.valor
+        
+        # Se não houver configurações, retornar valores padrão
+        if not configs:
+            configs = {
+                'contato_telefone': '(11) 99999-9999',
+                'contato_whatsapp': '5511999999999',
+                'contato_email': 'contato@barbearia.com',
+                'redes_instagram': 'https://instagram.com/suabarbearia',
+                'redes_facebook': 'https://facebook.com/suabarbearia',
+                'redes_tiktok': '',
+                'endereco_rua': 'Rua Exemplo, 123',
+                'endereco_bairro': 'Centro',
+                'endereco_cidade': 'São Paulo - SP',
+                'endereco_cep': '01234-567',
+                'endereco_maps': 'https://maps.google.com/?q=Rua+Exemplo+123+São+Paulo',
+                'horario_seg_sex': '09:00 - 19:00',
+                'horario_sabado': '09:00 - 17:00',
+                'horario_domingo': 'Fechado',
+                'horario_feriados': 'Consulte'
+            }
+        
+        return jsonify(configs)
+        
+    except Exception as e:
+        print(f"Erro ao obter configurações de contato: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@api_bp.route('/configuracoes/contato', methods=['POST'])
+def salvar_configuracoes_contato():
+    """Salva todas as configurações de contato"""
+    try:
+        dados = request.get_json()
+        
+        # Lista de chaves permitidas
+        chaves_permitidas = [
+            'contato_telefone', 'contato_whatsapp', 'contato_email',
+            'redes_instagram', 'redes_facebook', 'redes_tiktok',
+            'endereco_rua', 'endereco_bairro', 'endereco_cidade', 
+            'endereco_cep', 'endereco_maps',
+            'horario_seg_sex', 'horario_sabado', 'horario_domingo', 'horario_feriados'
+        ]
+        
+        # Salvar cada configuração
+        for chave in chaves_permitidas:
+            if chave in dados:
+                valor = dados[chave]
+                
+                # Buscar se já existe
+                config = ConfiguracaoGeral.query.filter_by(chave=chave).first()
+                
+                if config:
+                    # Atualizar
+                    config.valor = valor
+                else:
+                    # Criar nova
+                    config = ConfiguracaoGeral(
+                        chave=chave,
+                        valor=valor,
+                        descricao=f'Configuração de {chave}'
+                    )
+                    db.session.add(config)
+        
+        db.session.commit()
+        
+        return jsonify({'mensagem': 'Configurações salvas com sucesso!'})
+        
+    except Exception as e:
+        print(f"Erro ao salvar configurações de contato: {e}")
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 500
