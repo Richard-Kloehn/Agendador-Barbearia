@@ -48,6 +48,7 @@
         <!-- Card de Login -->
         <div class="glass-effect rounded-2xl shadow-2xl p-8">
             <form method="POST" action="/admin-login">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         <i class="fas fa-lock mr-2" style="color: #daa520;"></i>Senha de Acesso
