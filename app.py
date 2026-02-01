@@ -133,9 +133,11 @@ def set_cache_headers(response):
 # Importar models e routes
 from models import Agendamento, ConfiguracaoBarbearia
 from routes import api_bp, admin_bp
+from debug_routes import debug_bp
 
 app.register_blueprint(api_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(debug_bp, url_prefix='/debug')
 
 # Configuração do scheduler para envio de lembretes
 scheduler = BackgroundScheduler()
