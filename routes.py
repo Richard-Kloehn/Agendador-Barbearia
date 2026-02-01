@@ -84,11 +84,11 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
             almoco_fim = datetime.strptime(horario_especial.intervalo_almoco_fim, '%H:%M').time()
     else:
         # Usar horários do barbeiro
-        dia_semana = data.weekday()  # 0=segunda, 6=domingo
-        if dia_semana == 6:  # domingo
+        # Python weekday: 0=segunda, 6=domingo
+        # Nosso sistema: 1=segunda, 6=sábado, 0=domingo
+        dia_semana = data.weekday() + 1  # Converte para nosso padrão
+        if dia_semana == 7:  # domingo no Python vira 0 no nosso sistema
             dia_semana = 0
-        else:
-            dia_semana += 1
         
         horario_barbeiro = HorarioBarbeiro.query.filter_by(
             barbeiro_id=barbeiro_id, 
@@ -218,8 +218,14 @@ def get_horarios_disponiveis():
         return jsonify({'erro': 'Serviço não encontrado'}), 404
     
     # Verificar dia da semana
+    # Python weekday: 0=segunda a 6=domingo
+    # Nosso sistema: 1=segunda a 6=sábado, 0=domingo
+    dia_semana_check = data.weekday() + 1
+    if dia_semana_check == 7:  # domingo
+        dia_semana_check = 0
+    
     dias_funcionamento = [int(d) for d in config.dias_funcionamento.split(',')]
-    if data.weekday() not in dias_funcionamento:
+    if dia_semana_check not in dias_funcionamento:
         return jsonify({'disponiveis': [], 'mensagem': 'Barbearia fechada neste dia'})
     
     horarios = gerar_horarios_disponiveis(data, config, barbeiro_id, servico.duracao)

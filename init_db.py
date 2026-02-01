@@ -29,7 +29,7 @@ def inicializar_banco():
                 duracao_atendimento=30,  # 30 minutos por atendimento
                 intervalo_almoco_inicio="12:00",
                 intervalo_almoco_fim="13:00",
-                dias_funcionamento="0,1,2,3,4,5"  # Segunda a Sábado (0=segunda, 6=domingo)
+                dias_funcionamento="1,2,3,4,5,6"  # Segunda a Sábado (1=segunda, 6=sábado, 0=domingo)
             )
             
             db.session.add(config_padrao)

@@ -136,7 +136,7 @@ class ConfiguracaoBarbearia(db.Model):
     duracao_atendimento = db.Column(db.Integer, default=30)  # minutos
     intervalo_almoco_inicio = db.Column(db.String(5))
     intervalo_almoco_fim = db.Column(db.String(5))
-    dias_funcionamento = db.Column(db.String(50), default='1,2,3,4,5,6')  # 0=domingo, 6=sábado
+    dias_funcionamento = db.Column(db.String(50), default='1,2,3,4,5,6')  # 1=segunda a 6=sábado, 0=domingo
     
     def to_dict(self):
         return {
