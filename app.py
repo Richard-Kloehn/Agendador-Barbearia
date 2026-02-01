@@ -370,7 +370,28 @@ def confirmar_agendamento(token):
 
 # Inicializar banco de dados na primeira execução
 with app.app_context():
+    # Criar tabelas
     db.create_all()
+    
+    # Adicionar colunas de avaliação se não existirem (PostgreSQL)
+    if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            colunas_agendamento = [col['name'] for col in inspector.get_columns('agendamentos')]
+            
+            if 'avaliacao' not in colunas_agendamento:
+                print("\n📋 Adicionando colunas de avaliação...")
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS avaliacao INTEGER'))
+                    conn.execute(text('ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS comentario_avaliacao TEXT'))
+                    conn.execute(text('ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS data_avaliacao TIMESTAMP'))
+                    conn.commit()
+                print("✅ Colunas de avaliação adicionadas!")
+        except Exception as e:
+            print(f"⚠️ Aviso ao adicionar colunas: {e}")
+    
+    print("✅ Banco de dados inicializado!")
     
     # Criar configuração padrão se não existir
     if not ConfiguracaoBarbearia.query.first():
