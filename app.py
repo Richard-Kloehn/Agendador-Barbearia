@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Flask App
 app = Flask(__name__)
 
 # Corrigir DATABASE_URL do Render (postgres:// -> postgresql://)
