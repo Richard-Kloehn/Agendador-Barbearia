@@ -325,8 +325,12 @@ except Exception as e:
 
 # Corrigir horários se necessário (importante para produção)
 try:
+    print("\n" + "="*60)
+    print("🔧 EXECUTANDO CORREÇÃO DE HORÁRIOS...")
+    print("="*60)
     from corrigir_horarios_producao import corrigir_horarios_producao
     corrigir_horarios_producao()
+    print("✅ Correção de horários concluída!")
 except Exception as e:
     print(f"⚠️ Aviso ao corrigir horários: {e}")
 
