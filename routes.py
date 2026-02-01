@@ -898,16 +898,12 @@ def listar_barbeiros():
         
         # Filtrar barbeiros que trabalham neste dia da semana
         # Python weekday: 0=segunda, 1=terça, ..., 6=domingo
-        # Banco de dados: 0=domingo, 1=segunda, ..., 6=sábado
-        dia_semana_python = data.weekday()  # 0=segunda-feira, 6=domingo
-        
-        # Converter para formato do banco (0=domingo, 1=segunda, ..., 6=sábado)
-        if dia_semana_python == 6:  # domingo
+        # Nosso sistema: 1=segunda, 2=terça, ..., 6=sábado, 0=domingo
+        dia_semana_db = data.weekday() + 1  # Converte para nosso padrão
+        if dia_semana_db == 7:  # domingo no Python vira 0 no nosso sistema
             dia_semana_db = 0
-        else:
-            dia_semana_db = dia_semana_python + 1
         
-        print(f"🔍 Buscando barbeiros para {data_str} (dia da semana DB: {dia_semana_db})")
+        print(f"🔍 Buscando barbeiros para {data_str} (dia da semana DB: {dia_semana_db}, Python weekday: {data.weekday()})")
         
         # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
         horarios_especiais = HorarioEspecial.query.filter(
@@ -919,7 +915,10 @@ def listar_barbeiros():
             HorarioBarbeiro.ativo == True
         ).all()
         
-        print(f"   Horários encontrados: {len(horarios_barbeiros)}")
+        print(f"   Horários encontrados para dia {dia_semana_db}: {len(horarios_barbeiros)}")
+        for h in horarios_barbeiros:
+            barbeiro_nome = Barbeiro.query.get(h.barbeiro_id).nome if h.barbeiro_id else "N/A"
+            print(f"      - Barbeiro {h.barbeiro_id} ({barbeiro_nome}): {h.horario_inicio}-{h.horario_fim}")
         
         # Criar dicts para busca O(1)
         especiais_por_barbeiro = {h.barbeiro_id: h for h in horarios_especiais if h.barbeiro_id}

@@ -320,6 +320,13 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Corrigir horários se necessário (importante para produção)
+try:
+    from corrigir_horarios_producao import corrigir_horarios_producao
+    corrigir_horarios_producao()
+except Exception as e:
+    print(f"⚠️ Aviso ao corrigir horários: {e}")
+
 @app.route('/')
 def index():
     return render_template('index.html')
