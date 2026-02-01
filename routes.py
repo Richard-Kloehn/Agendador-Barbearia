@@ -84,11 +84,7 @@ def gerar_horarios_disponiveis(data, config, barbeiro_id=None, duracao_servico=N
             almoco_fim = datetime.strptime(horario_especial.intervalo_almoco_fim, '%H:%M').time()
     else:
         # Usar horários do barbeiro
-        # Python weekday: 0=segunda, 6=domingo
-        # Nosso sistema: 1=segunda, 6=sábado, 0=domingo
-        dia_semana = data.weekday() + 1  # Converte para nosso padrão
-        if dia_semana == 7:  # domingo no Python vira 0 no nosso sistema
-            dia_semana = 0
+        dia_semana = data.weekday()
         
         horario_barbeiro = HorarioBarbeiro.query.filter_by(
             barbeiro_id=barbeiro_id, 
@@ -218,14 +214,8 @@ def get_horarios_disponiveis():
         return jsonify({'erro': 'Serviço não encontrado'}), 404
     
     # Verificar dia da semana
-    # Python weekday: 0=segunda a 6=domingo
-    # Nosso sistema: 1=segunda a 6=sábado, 0=domingo
-    dia_semana_check = data.weekday() + 1
-    if dia_semana_check == 7:  # domingo
-        dia_semana_check = 0
-    
     dias_funcionamento = [int(d) for d in config.dias_funcionamento.split(',')]
-    if dia_semana_check not in dias_funcionamento:
+    if data.weekday() not in dias_funcionamento:
         return jsonify({'disponiveis': [], 'mensagem': 'Barbearia fechada neste dia'})
     
     horarios = gerar_horarios_disponiveis(data, config, barbeiro_id, servico.duracao)
@@ -897,13 +887,9 @@ def listar_barbeiros():
             .all()
         
         # Filtrar barbeiros que trabalham neste dia da semana
-        # Python weekday: 0=segunda, 1=terça, ..., 6=domingo
-        # Nosso sistema: 1=segunda, 2=terça, ..., 6=sábado, 0=domingo
-        dia_semana_db = data.weekday() + 1  # Converte para nosso padrão
-        if dia_semana_db == 7:  # domingo no Python vira 0 no nosso sistema
-            dia_semana_db = 0
+        dia_semana_db = data.weekday()
         
-        print(f"🔍 Buscando barbeiros para {data_str} (dia da semana DB: {dia_semana_db}, Python weekday: {data.weekday()})")
+        print(f"🔍 Buscando barbeiros para {data_str} (dia da semana: {dia_semana_db})")
         
         # Pré-carregar TODOS os horários especiais e normais com uma única query (otimizado)
         horarios_especiais = HorarioEspecial.query.filter(
