@@ -140,6 +140,12 @@ app.register_blueprint(api_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(debug_bp, url_prefix='/debug')
 
+# Isentar rotas da API do CSRF (para permitir requisições do frontend)
+if SEGURANCA_ATIVA:
+    csrf.exempt(api_bp)
+    csrf.exempt(debug_bp)
+    print("✅ Rotas da API isentas de CSRF")
+
 # Configuração do scheduler para envio de lembretes
 scheduler = BackgroundScheduler()
 
