@@ -328,26 +328,32 @@ def listar_datas_disponiveis():
 @api_bp.route('/agendar', methods=['POST'])
 def criar_agendamento():
     """Cria novo agendamento e salva/atualiza dados do cliente com validações"""
-    dados = request.get_json()
+    try:
+        dados = request.get_json()
+        
+        # Sanitizar dados de entrada
+        dados_limpos = sanitizar_dados_agendamento(dados)
+        
+        # Validar dados
+        erros_validacao = validar_dados_agendamento(dados_limpos)
+        if erros_validacao:
+            return jsonify({'erro': erros_validacao[0], 'erros': erros_validacao}), 400
+        
+        # Validar nome completo (mínimo 2 palavras)
+        nome_cliente = dados_limpos.get('nome_cliente', '').strip()
+        partes_nome = [p for p in nome_cliente.split() if len(p) > 0]
+        if len(partes_nome) < 2:
+            return jsonify({'erro': 'Por favor, informe seu nome completo (nome e sobrenome)'}), 400
+        
+        # Validar barbeiro e serviço
+        barbeiro_id = dados_limpos.get('barbeiro_id')
+        servico_id = dados_limpos.get('servico_id')
     
-    # Sanitizar dados de entrada
-    dados_limpos = sanitizar_dados_agendamento(dados)
-    
-    # Validar dados
-    erros_validacao = validar_dados_agendamento(dados_limpos)
-    if erros_validacao:
-        return jsonify({'erro': erros_validacao[0], 'erros': erros_validacao}), 400
-    
-    # Validar nome completo (mínimo 2 palavras)
-    nome_cliente = dados_limpos.get('nome_cliente', '').strip()
-    partes_nome = [p for p in nome_cliente.split() if len(p) > 0]
-    if len(partes_nome) < 2:
-        return jsonify({'erro': 'Por favor, informe seu nome completo (nome e sobrenome)'}), 400
-    
-    # Validar barbeiro e serviço
-    barbeiro_id = dados_limpos.get('barbeiro_id')
-    servico_id = dados_limpos.get('servico_id')
-    
+    except Exception as e:
+        print(f"❌ ERRO ao criar agendamento: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'erro': f'Erro ao processar agendamento: {str(e)}'}), 500
     barbeiro = Barbeiro.query.get(barbeiro_id)
     if not barbeiro or not barbeiro.ativo:
         return jsonify({'erro': 'Barbeiro não disponível'}), 400
